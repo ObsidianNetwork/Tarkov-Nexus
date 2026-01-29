@@ -1,0 +1,43 @@
+---
+import { getLatestRelease } from '../lib/github';
+
+const { version, downloadUrl } = await getLatestRelease();
+
+const checkIcon = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>`;
+
+const requirements = [
+  "Windows 10/11 (64-bit)",
+  "Escape from Tarkov",
+  "Modern web browser"
+];
+---
+
+<section class="download" id="download">
+  <div class="container">
+    <div class="download-card">
+      <h2>Ready to Try Tarkov Nexus?</h2>
+      <p>Free and built for the community</p>
+      <div class="version-badge">Latest Version: <span>{version}</span></div>
+      <div class="download-buttons">
+        <a href={downloadUrl} class="btn btn-primary">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
+          Download for Windows (x64)
+        </a>
+        <a href="https://github.com/Jordanmuss99/Tarkov-Nexus/releases" target="_blank" class="btn btn-secondary">
+          All Releases
+        </a>
+      </div>
+      <div class="system-req">
+        <h4>Requirements</h4>
+        <ul>
+          {requirements.map((req) => (
+            <li>
+              <Fragment set:html={checkIcon} />
+              {req}
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>

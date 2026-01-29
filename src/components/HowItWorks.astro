@@ -1,0 +1,79 @@
+---
+const steps = [
+  {
+    number: 1,
+    title: "Setup",
+    description: "Download Tarkov Nexus, run it, and follow the quick setup wizard"
+  },
+  {
+    number: 2,
+    title: "Connect",
+    description: "Open tarkov.dev, go to any map, and paste your Remote ID into the app"
+  },
+  {
+    number: 3,
+    title: "Play",
+    description: "Load into a raid and take a screenshot (default: PrintScreen)"
+  },
+  {
+    number: 4,
+    title: "See Your Position",
+    description: "Your marker instantly appears on the tarkov.dev map at your exact coordinates"
+  }
+];
+---
+
+<section class="how-it-works" id="how-it-works">
+  <div class="container">
+    <div class="section-header">
+      <h2>How It Works</h2>
+      <p>Get set up in under a minute</p>
+    </div>
+    <div class="steps">
+      {steps.map((step) => (
+        <div class="step">
+          <div class="step-number">{step.number}</div>
+          <h3>{step.title}</h3>
+          <p>{step.description}</p>
+        </div>
+      ))}
+    </div>
+
+    <div class="explanation-box">
+      <p class="explanation-label">
+        <strong>How does it work?</strong>
+      </p>
+      <p class="explanation-text">
+        When you take a screenshot in Tarkov, the game saves your coordinates in the filename. Tarkov Nexus watches for new screenshots and sends those coordinates to tarkov.dev in real-time.
+      </p>
+    </div>
+  </div>
+</section>
+
+<style>
+  .explanation-box {
+    margin-top: 3rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 2rem;
+    text-align: center;
+  }
+
+  .explanation-label {
+    color: var(--text-secondary);
+    font-size: 1.1rem;
+    margin-bottom: 1rem;
+  }
+
+  .explanation-label strong {
+    color: var(--neon-green);
+  }
+
+  .explanation-text {
+    color: var(--text-primary);
+    font-size: 1.25rem;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+</style>
