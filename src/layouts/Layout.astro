@@ -8,6 +8,8 @@ const {
   title = "Tarkov Nexus - Real-Time Map Position Sync",
   description = "Tarkov Nexus - Real-time position tracking for Escape from Tarkov. Sync your in-game position to tarkov.dev maps."
 } = Astro.props;
+
+const baseUrl = import.meta.env.BASE_URL;
 ---
 
 <!DOCTYPE html>
@@ -19,7 +21,7 @@ const {
   <meta name="keywords" content="Escape from Tarkov, EFT, tarkov.dev, map sync, position tracking, Tarkov tools">
   <meta name="theme-color" content="#0C0E14">
   <title>{title}</title>
-  <link rel="icon" type="image/x-icon" href="/Tarkov-Nexus/favicon.ico">
+  <link rel="icon" type="image/x-icon" href={`${baseUrl}favicon.ico`}>
 </head>
 <body>
   <div class="bg-gradient"></div>
