@@ -1,4 +1,4 @@
-const REPO = 'Jordanmuss99/Tarkov-Nexus';
+const REPO = 'ObsidianNetwork/Tarkov-Nexus';
 
 export interface ReleaseInfo {
   version: string;
