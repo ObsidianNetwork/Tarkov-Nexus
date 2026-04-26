@@ -1,0 +1,5 @@
+# Tarkov Nexus - https://tarkov.nexus
+User-agent: *
+Allow: /
+
+Sitemap: https://tarkov.nexus/sitemap-index.xml

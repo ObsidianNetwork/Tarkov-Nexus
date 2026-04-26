@@ -1,0 +1,146 @@
+---
+export const faqs = [
+  {
+    question: "What is Tarkov Nexus?",
+    answer: "Tarkov Nexus is a free, open-source desktop tool that displays your real-time position on the Escape from Tarkov map. It reads coordinates from your in-game screenshots and pushes them to the live tarkov.dev interactive map so you and your squad can see exactly where you are during a raid."
+  },
+  {
+    question: "Which Tarkov maps are supported?",
+    answer: "Every map in Escape from Tarkov is supported, including Customs, Woods, Shoreline, Lighthouse, Reserve, Streets of Tarkov, Interchange, Factory, The Lab, and Ground Zero. Tarkov Nexus auto-detects the map you load into &mdash; no manual selection required."
+  },
+  {
+    question: "How do I see my position on the Tarkov map?",
+    answer: "Install Tarkov Nexus, open tarkov.dev in your browser, and paste your Remote ID into the app. Once you load into a raid, press PrintScreen to take a screenshot and your live position marker will appear on the tarkov.dev map at your exact coordinates."
+  },
+  {
+    question: "Is Tarkov Nexus a cheat or against the rules?",
+    answer: "No. Tarkov Nexus only reads screenshot filenames that the game itself writes to disk. It never injects code, reads game memory, or modifies the Escape from Tarkov client. It is functionally identical to manually opening a screenshot and reading the coordinates yourself."
+  },
+  {
+    question: "Is Tarkov Nexus free?",
+    answer: "Yes. Tarkov Nexus is 100% free and open-source. There are no subscriptions, no ads, and no paywalls."
+  },
+  {
+    question: "Does it work with the tarkov.dev map?",
+    answer: "Yes. Tarkov Nexus is built specifically to sync your live position to the tarkov.dev interactive map. Your marker updates each time you take an in-game screenshot."
+  },
+  {
+    question: "Can I share my position with my squad?",
+    answer: "Yes. The built-in Party System lets you host or join a local-network party so everyone in your group sees each other&rsquo;s positions on the same Tarkov map in real time."
+  },
+  {
+    question: "What are the system requirements?",
+    answer: "Windows 10 or 11 (64-bit), an installed copy of Escape from Tarkov, and any modern web browser to view the tarkov.dev map."
+  },
+  {
+    question: "Does Tarkov Nexus upload my screenshots?",
+    answer: "No. All screenshot processing happens locally on your machine. Only your map coordinates are transmitted &mdash; no images, logs, or personal data ever leave your computer."
+  },
+  {
+    question: "Does Tarkov Nexus track quests on the map?",
+    answer: "Yes. Optional TarkovTracker integration syncs your quest progress so you can see active quest objectives directly on the tarkov.dev map alongside your live position."
+  }
+];
+---
+
+<section class="faq" id="faq">
+  <div class="container">
+    <div class="section-header">
+      <h2>Tarkov Map Tracker &mdash; FAQ</h2>
+      <p>Common questions about live position tracking on the Escape from Tarkov map</p>
+    </div>
+
+    <div class="faq-list">
+      {faqs.map((item) => (
+        <details class="faq-item">
+          <summary>
+            <span>{item.question}</span>
+            <svg class="faq-chevron" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="20" height="20">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+            </svg>
+          </summary>
+          <div class="faq-answer">
+            <p set:html={item.answer}></p>
+          </div>
+        </details>
+      ))}
+    </div>
+  </div>
+</section>
+
+<style>
+  .faq {
+    padding: 5rem 0;
+  }
+
+  .faq-list {
+    max-width: 800px;
+    margin: 3rem auto 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .faq-item {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    overflow: hidden;
+    transition: border-color 0.2s ease;
+  }
+
+  .faq-item[open] {
+    border-color: var(--neon-green, #58f287);
+  }
+
+  .faq-item summary {
+    list-style: none;
+    cursor: pointer;
+    padding: 1.25rem 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    user-select: none;
+  }
+
+  .faq-item summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .faq-chevron {
+    transition: transform 0.2s ease;
+    flex-shrink: 0;
+    color: var(--text-secondary);
+  }
+
+  .faq-item[open] .faq-chevron {
+    transform: rotate(180deg);
+  }
+
+  .faq-answer {
+    padding: 0 1.5rem 1.5rem;
+    color: var(--text-secondary);
+    line-height: 1.65;
+  }
+
+  .faq-answer p {
+    margin: 0;
+  }
+
+  @media (max-width: 640px) {
+    .faq {
+      padding: 3rem 0;
+    }
+    .faq-item summary {
+      font-size: 0.98rem;
+      padding: 1rem 1.25rem;
+    }
+    .faq-answer {
+      padding: 0 1.25rem 1.25rem;
+    }
+  }
+</style>
