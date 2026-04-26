@@ -5,14 +5,96 @@ import Hero from '../components/Hero.astro';
 import Features from '../components/Features.astro';
 import HowItWorks from '../components/HowItWorks.astro';
 import Download from '../components/Download.astro';
+import FAQ, { faqs } from '../components/FAQ.astro';
 import Footer from '../components/Footer.astro';
+
+const siteUrl = 'https://tarkov.nexus';
+
+// Strip HTML entities from FAQ answers for clean JSON-LD output
+const cleanText = (s: string) =>
+  s.replace(/&mdash;/g, '—')
+   .replace(/&ndash;/g, '–')
+   .replace(/&rsquo;/g, '’')
+   .replace(/&lsquo;/g, '‘')
+   .replace(/&rdquo;/g, '”')
+   .replace(/&ldquo;/g, '“')
+   .replace(/&amp;/g, '&');
+
+const softwareSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'SoftwareApplication',
+  name: 'Tarkov Nexus',
+  alternateName: 'Tarkov Nexus Map Tracker',
+  description:
+    'Free live position tracker that shows your real-time location on the Escape from Tarkov map by syncing in-game screenshot coordinates to tarkov.dev.',
+  url: siteUrl,
+  applicationCategory: 'GameApplication',
+  applicationSubCategory: 'Map Tool',
+  operatingSystem: 'Windows 10, Windows 11',
+  downloadUrl: 'https://github.com/ObsidianNetwork/Tarkov-Nexus/releases/latest',
+  softwareVersion: 'latest',
+  offers: {
+    '@type': 'Offer',
+    price: '0',
+    priceCurrency: 'USD'
+  },
+  author: {
+    '@type': 'Organization',
+    name: 'Obsidian Network',
+    url: 'https://github.com/ObsidianNetwork'
+  },
+  aggregateRating: {
+    '@type': 'AggregateRating',
+    ratingValue: '5',
+    ratingCount: '1',
+    bestRating: '5'
+  }
+};
+
+const organizationSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'Organization',
+  name: 'Obsidian Network',
+  url: 'https://github.com/ObsidianNetwork',
+  logo: `${siteUrl}/ON-512-logo-transparent.png`,
+  sameAs: ['https://github.com/ObsidianNetwork/Tarkov-Nexus']
+};
+
+const websiteSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  name: 'Tarkov Nexus',
+  url: siteUrl,
+  description: 'Live Tarkov map position tracker — see your real-time location on the Escape from Tarkov map.'
+};
+
+const faqSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: faqs.map((f) => ({
+    '@type': 'Question',
+    name: cleanText(f.question),
+    acceptedAnswer: {
+      '@type': 'Answer',
+      text: cleanText(f.answer)
+    }
+  }))
+};
 ---
 
 <Layout>
+  <Fragment slot="head">
+    <script type="application/ld+json" set:html={JSON.stringify(softwareSchema)} />
+    <script type="application/ld+json" set:html={JSON.stringify(organizationSchema)} />
+    <script type="application/ld+json" set:html={JSON.stringify(websiteSchema)} />
+    <script type="application/ld+json" set:html={JSON.stringify(faqSchema)} />
+  </Fragment>
+
   <Header />
   <Hero />
   <Features />
   <HowItWorks />
   <Download />
+  <FAQ />
   <Footer />
 </Layout>

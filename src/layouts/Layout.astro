@@ -2,14 +2,21 @@
 interface Props {
   title?: string;
   description?: string;
+  image?: string;
+  noindex?: boolean;
 }
 
 const {
-  title = "Tarkov Nexus - Real-Time Map Position Sync",
-  description = "Tarkov Nexus - Real-time position tracking for Escape from Tarkov. Sync your in-game position to tarkov.dev maps."
+  title = "Live Tarkov Map Tracker — Real-Time Position Sync | Tarkov Nexus",
+  description = "Free live Tarkov map tracker. See your real-time position on the Escape from Tarkov map across Customs, Woods, Shoreline, Lighthouse, Reserve, Streets, Interchange, Factory, and Ground Zero — synced instantly to tarkov.dev.",
+  image = "/og-image.png",
+  noindex = false
 } = Astro.props;
 
 const baseUrl = import.meta.env.BASE_URL;
+const siteUrl = "https://tarkov.nexus";
+const canonical = new URL(Astro.url.pathname, siteUrl).href;
+const ogImage = new URL(image, siteUrl).href;
 ---
 
 <!DOCTYPE html>
@@ -17,11 +24,42 @@ const baseUrl = import.meta.env.BASE_URL;
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content={description}>
-  <meta name="keywords" content="Escape from Tarkov, EFT, tarkov.dev, map sync, position tracking, Tarkov tools">
-  <meta name="theme-color" content="#0C0E14">
   <title>{title}</title>
+  <meta name="description" content={description}>
+  <meta name="keywords" content="tarkov map, escape from tarkov map, tarkov live map, tarkov map tracker, tarkov position tracker, tarkov map sync, tarkov.dev map, tarkov customs map, tarkov woods map, tarkov shoreline map, tarkov lighthouse map, tarkov reserve map, tarkov streets map, EFT map, tarkov interactive map">
+  <meta name="author" content="Obsidian Network">
+  <meta name="theme-color" content="#0C0E14">
+  <meta name="robots" content={noindex ? "noindex,nofollow" : "index,follow,max-image-preview:large,max-snippet:-1"}>
+
+  <link rel="canonical" href={canonical}>
   <link rel="icon" type="image/x-icon" href={`${baseUrl}favicon.ico`}>
+  <link rel="apple-touch-icon" href={`${baseUrl}ON-512-logo-transparent.png`}>
+
+  <!-- Performance: preconnect to third-party hosts we hit -->
+  <link rel="preconnect" href="https://api.github.com" crossorigin>
+  <link rel="dns-prefetch" href="https://github.com">
+  <link rel="dns-prefetch" href="https://tarkov.dev">
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Tarkov Nexus">
+  <meta property="og:title" content={title}>
+  <meta property="og:description" content={description}>
+  <meta property="og:url" content={canonical}>
+  <meta property="og:image" content={ogImage}>
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Tarkov Nexus — Live Tarkov Map Position Tracker">
+  <meta property="og:locale" content="en_US">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content={title}>
+  <meta name="twitter:description" content={description}>
+  <meta name="twitter:image" content={ogImage}>
+  <meta name="twitter:image:alt" content="Tarkov Nexus — Live Tarkov Map Position Tracker">
+
+  <slot name="head" />
 </head>
 <body>
   <div class="bg-gradient"></div>
