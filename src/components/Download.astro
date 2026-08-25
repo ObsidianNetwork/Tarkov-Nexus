@@ -1,7 +1,7 @@
 ---
-import { getLatestRelease } from '../lib/github';
+import { getLatestRelease, RELEASES_API } from '../lib/github';
 
-const { version, downloadUrl } = await getLatestRelease();
+const { version, downloadUrl, totalDownloads } = await getLatestRelease();
 
 const checkIcon = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>`;
 
@@ -18,6 +18,10 @@ const requirements = [
       <h2>Ready to Try Tarkov Nexus?</h2>
       <p>Free and built for the community</p>
       <div class="version-badge">Latest Version: <span>{version}</span></div>
+      <p class="download-counter" data-downloads-api={RELEASES_API}>
+        <strong data-downloads>{totalDownloads.toLocaleString('en-US')}</strong>
+        downloads worldwide
+      </p>
       <div class="download-buttons">
         <a href={downloadUrl} class="btn btn-primary">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
@@ -41,3 +45,52 @@ const requirements = [
     </div>
   </div>
 </section>
+
+<style>
+  .version-badge {
+    margin-bottom: 0.75rem;
+  }
+
+  .download-counter {
+    margin: 0 0 2rem;
+    font-size: 0.9375rem;
+    color: var(--text-secondary);
+  }
+
+  .download-counter strong {
+    color: var(--neon-green);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+</style>
+
+<script>
+  // The build-time count freezes at deploy; refresh it from GitHub on load.
+  const counter = document.querySelector<HTMLElement>('[data-downloads-api]');
+  const value = counter?.querySelector<HTMLElement>('[data-downloads]');
+  const api = counter?.dataset.downloadsApi;
+
+  if (value && api) {
+    fetch(api)
+      .then((res) => res.json())
+      .then((releases) => {
+        if (!Array.isArray(releases)) return;
+        const total = releases.reduce(
+          (sum: number, release: any) =>
+            sum +
+            (release.assets ?? []).reduce(
+              (assetSum: number, asset: any) =>
+                /\.(zip|exe|msi)$/i.test(asset.name)
+                  ? assetSum + (asset.download_count ?? 0)
+                  : assetSum,
+              0
+            ),
+          0
+        );
+        if (total > 0) value.textContent = total.toLocaleString('en-US');
+      })
+      .catch(() => {
+        /* keep the build-time number */
+      });
+  }
+</script>
