@@ -1,5 +1,6 @@
 ---
 import Analytics from '../components/Analytics.astro';
+import Notice from '../components/Notice.astro';
 
 interface Props {
   title?: string;
@@ -68,6 +69,7 @@ const ogImage = new URL(image, siteUrl).href;
 <body>
   <div class="bg-gradient"></div>
   <slot />
+  <Notice />
 </body>
 </html>
 
