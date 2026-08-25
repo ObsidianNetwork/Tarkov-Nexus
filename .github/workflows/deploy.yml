@@ -41,6 +41,10 @@ jobs:
 
       - name: Build Astro site
         run: npm run build
+        env:
+          # Repository variable, not a secret: the GA4 Measurement ID ships in
+          # the public HTML anyway. Settings > Secrets and variables > Actions > Variables.
+          PUBLIC_GA_ID: ${{ vars.PUBLIC_GA_ID }}
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
