@@ -187,19 +187,22 @@ header {
 
 .hero-visual {
   position: relative;
+  width: 300px;
+  margin: 0 auto;
 }
 
 .hero-image {
+  display: block;
   width: 100%;
-  border-radius: 16px;
-  border: 1px solid var(--border-color);
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  max-width: 300px;
+  margin: 0 auto;
+  filter: drop-shadow(0 0 60px rgba(88, 101, 242, 0.35));
 }
 
 .hero-badge {
   position: absolute;
-  top: -1rem;
-  right: -1rem;
+  top: 0;
+  right: -0.5rem;
   background: var(--neon-green);
   color: var(--bg-darker);
   padding: 0.5rem 1rem;
