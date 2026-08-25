@@ -1,0 +1,40 @@
+---
+// GA4 Measurement ID is injected at build time (see .github/workflows/deploy.yml).
+// With no ID configured the component renders nothing, so local dev and forks
+// never send traffic to Analytics.
+const gaId = import.meta.env.PUBLIC_GA_ID;
+---
+
+{gaId && (
+  <Fragment>
+    <link rel="preconnect" href="https://www.googletagmanager.com" crossorigin />
+    <script is:inline async src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`}></script>
+    <script is:inline define:vars={{ gaId }}>
+      window.dataLayer = window.dataLayer || [];
+      function gtag() {
+        window.dataLayer.push(arguments);
+      }
+      window.gtag = gtag;
+      gtag('js', new Date());
+      gtag('config', gaId);
+
+      // Explicit download tracking: GA4's automatic file_download event misses
+      // GitHub release URLs on some browsers, and this also captures which
+      // button and version the click came from.
+      document.addEventListener('click', (event) => {
+        const link = event.target.closest?.('a[href]');
+        if (!link) return;
+
+        const href = link.href;
+        const isRelease = /\/releases\/download\//.test(href) || /\.(zip|exe|msi)$/i.test(href);
+        if (!isRelease) return;
+
+        gtag('event', 'download_click', {
+          link_url: href,
+          file_name: href.split('/').pop(),
+          location: link.closest('section')?.id || 'hero'
+        });
+      });
+    </script>
+  </Fragment>
+)}
