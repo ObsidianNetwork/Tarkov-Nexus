@@ -191,15 +191,37 @@ const { variant = 'inline' } = Astro.props;
         );
         if (total <= 0) throw new Error('no downloads reported');
 
-        const formatted = total.toLocaleString('en-US');
+        const targets: HTMLElement[] = [];
         counters.forEach((counter) => {
           const value = counter.querySelector<HTMLElement>('[data-downloads]');
           if (value) {
-            value.textContent = formatted;
+            // Announce the final number once, not every animation frame.
+            value.textContent = total.toLocaleString('en-US');
             value.setAttribute('aria-busy', 'false');
+            targets.push(value);
           }
           counter.classList.remove('is-loading');
         });
+
+        const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (reduceMotion || targets.length === 0) return;
+
+        // Count up from a near-total start: the point is to draw the eye to a
+        // live number, not to imply the app was downloaded 0 times a second ago.
+        const start = Math.floor(total * 0.9);
+        const duration = 1100;
+        const begin = performance.now();
+
+        const tick = (now: number) => {
+          const progress = Math.min((now - begin) / duration, 1);
+          const eased = 1 - Math.pow(1 - progress, 3);
+          const current = Math.round(start + (total - start) * eased).toLocaleString('en-US');
+          targets.forEach((el) => {
+            el.textContent = current;
+          });
+          if (progress < 1) requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
       })
       .catch(() => {
         // Rate limited, offline, or blocked: hide rather than shimmer forever.
