@@ -1,27 +1,37 @@
 ---
-import { getLatestRelease, RELEASES_API } from '../lib/github';
+import { RELEASES_API } from '../lib/github';
 
 interface Props {
   variant?: 'hero' | 'inline';
 }
 
 const { variant = 'inline' } = Astro.props;
-const { totalDownloads } = await getLatestRelease();
-const formatted = totalDownloads.toLocaleString('en-US');
+// No build-time number: the count is always fetched live in the browser, so a
+// page served from cache can never show a stale total.
 ---
 
 {variant === 'hero' ? (
-  <div class="counter-hero" data-downloads-api={RELEASES_API}>
+  <div class="counter-hero is-loading" data-counter data-downloads-api={RELEASES_API}>
     <span class="counter-pulse" aria-hidden="true"></span>
-    <span class="counter-value" data-downloads>{formatted}</span>
+    <span class="counter-value" data-downloads aria-live="polite" aria-busy="true">
+      <span class="counter-skeleton" aria-hidden="true"></span>
+      <span class="visually-hidden">Loading download count</span>
+    </span>
     <span class="counter-label">downloads worldwide</span>
   </div>
 ) : (
-  <p class="counter-inline" data-downloads-api={RELEASES_API}>
-    <strong data-downloads>{formatted}</strong>
-    downloads worldwide
+  <p class="counter-inline is-loading" data-counter data-downloads-api={RELEASES_API}>
+    <span data-downloads aria-live="polite" aria-busy="true">
+      <span class="counter-skeleton" aria-hidden="true"></span>
+      <span class="visually-hidden">Loading download count</span>
+    </span>
+    <span class="counter-suffix">downloads worldwide</span>
   </p>
 )}
+
+<noscript>
+  <style>[data-counter] { display: none !important; }</style>
+</noscript>
 
 <style>
   .counter-hero {
@@ -34,6 +44,13 @@ const formatted = totalDownloads.toLocaleString('en-US');
     background: var(--bg-card);
     border: 1px solid var(--border-color);
     border-radius: 16px;
+    transition: opacity 0.3s ease;
+  }
+
+  /* A counter that never resolved is worse than no counter at all. */
+  .counter-hero[hidden],
+  .counter-inline[hidden] {
+    display: none;
   }
 
   .counter-pulse {
@@ -52,12 +69,6 @@ const formatted = totalDownloads.toLocaleString('en-US');
     }
     100% {
       box-shadow: 0 0 0 0 rgba(0, 0, 0, 0);
-    }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .counter-pulse {
-      animation: none;
     }
   }
 
@@ -88,10 +99,61 @@ const formatted = totalDownloads.toLocaleString('en-US');
     color: var(--text-secondary);
   }
 
-  .counter-inline strong {
+  .counter-inline [data-downloads] {
     color: var(--neon-green);
     font-weight: 600;
     font-variant-numeric: tabular-nums;
+  }
+
+  /* Skeleton: reserves the width of a realistic number so nothing shifts on load. */
+  .counter-skeleton {
+    display: inline-block;
+    width: 5ch;
+    height: 0.8em;
+    vertical-align: baseline;
+    border-radius: 6px;
+    background: linear-gradient(
+      90deg,
+      var(--border-color) 25%,
+      rgba(255, 255, 255, 0.08) 50%,
+      var(--border-color) 75%
+    );
+    background-size: 200% 100%;
+    animation: counter-shimmer 1.4s ease-in-out infinite;
+  }
+
+  .counter-inline .counter-skeleton {
+    width: 4ch;
+    height: 0.9em;
+    border-radius: 4px;
+  }
+
+  @keyframes counter-shimmer {
+    0% {
+      background-position: 200% 0;
+    }
+    100% {
+      background-position: -200% 0;
+    }
+  }
+
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .counter-pulse,
+    .counter-skeleton {
+      animation: none;
+    }
   }
 
   @media (max-width: 768px) {
@@ -106,15 +168,15 @@ const formatted = totalDownloads.toLocaleString('en-US');
 </style>
 
 <script>
-  // The build-time count freezes at deploy; refresh it from GitHub on load.
-  const counters = document.querySelectorAll<HTMLElement>('[data-downloads-api]');
+  const counters = document.querySelectorAll<HTMLElement>('[data-counter]');
   const api = counters[0]?.dataset.downloadsApi;
 
   if (api) {
     fetch(api)
-      .then((res) => res.json())
+      .then((res) => (res.ok ? res.json() : Promise.reject(new Error(String(res.status)))))
       .then((releases) => {
-        if (!Array.isArray(releases)) return;
+        if (!Array.isArray(releases)) throw new Error('unexpected payload');
+
         const total = releases.reduce(
           (sum: number, release: any) =>
             sum +
@@ -127,15 +189,23 @@ const formatted = totalDownloads.toLocaleString('en-US');
             ),
           0
         );
-        if (total <= 0) return;
+        if (total <= 0) throw new Error('no downloads reported');
+
         const formatted = total.toLocaleString('en-US');
         counters.forEach((counter) => {
           const value = counter.querySelector<HTMLElement>('[data-downloads]');
-          if (value) value.textContent = formatted;
+          if (value) {
+            value.textContent = formatted;
+            value.setAttribute('aria-busy', 'false');
+          }
+          counter.classList.remove('is-loading');
         });
       })
       .catch(() => {
-        /* keep the build-time number */
+        // Rate limited, offline, or blocked: hide rather than shimmer forever.
+        counters.forEach((counter) => {
+          counter.hidden = true;
+        });
       });
   }
 </script>
