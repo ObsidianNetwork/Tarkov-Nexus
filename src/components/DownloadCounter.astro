@@ -1,0 +1,141 @@
+---
+import { getLatestRelease, RELEASES_API } from '../lib/github';
+
+interface Props {
+  variant?: 'hero' | 'inline';
+}
+
+const { variant = 'inline' } = Astro.props;
+const { totalDownloads } = await getLatestRelease();
+const formatted = totalDownloads.toLocaleString('en-US');
+---
+
+{variant === 'hero' ? (
+  <div class="counter-hero" data-downloads-api={RELEASES_API}>
+    <span class="counter-pulse" aria-hidden="true"></span>
+    <span class="counter-value" data-downloads>{formatted}</span>
+    <span class="counter-label">downloads worldwide</span>
+  </div>
+) : (
+  <p class="counter-inline" data-downloads-api={RELEASES_API}>
+    <strong data-downloads>{formatted}</strong>
+    downloads worldwide
+  </p>
+)}
+
+<style>
+  .counter-hero {
+    display: inline-grid;
+    grid-template-columns: auto auto;
+    align-items: baseline;
+    gap: 0 0.85rem;
+    padding: 1.5rem 2.25rem;
+    margin-bottom: 2rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+  }
+
+  .counter-pulse {
+    align-self: center;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--neon-green);
+    box-shadow: 0 0 0 0 var(--neon-green);
+    animation: counter-pulse 2.4s ease-out infinite;
+  }
+
+  @keyframes counter-pulse {
+    70% {
+      box-shadow: 0 0 0 12px rgba(0, 0, 0, 0);
+    }
+    100% {
+      box-shadow: 0 0 0 0 rgba(0, 0, 0, 0);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .counter-pulse {
+      animation: none;
+    }
+  }
+
+  .counter-value {
+    font-size: 3rem;
+    font-weight: 800;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    background: linear-gradient(135deg, var(--primary-purple), var(--neon-green));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .counter-label {
+    grid-column: 2;
+    margin-top: 0.35rem;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+  }
+
+  .counter-inline {
+    margin: 0 0 2rem;
+    font-size: 0.9375rem;
+    color: var(--text-secondary);
+  }
+
+  .counter-inline strong {
+    color: var(--neon-green);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  @media (max-width: 768px) {
+    .counter-hero {
+      justify-content: center;
+    }
+
+    .counter-value {
+      font-size: 2.5rem;
+    }
+  }
+</style>
+
+<script>
+  // The build-time count freezes at deploy; refresh it from GitHub on load.
+  const counters = document.querySelectorAll<HTMLElement>('[data-downloads-api]');
+  const api = counters[0]?.dataset.downloadsApi;
+
+  if (api) {
+    fetch(api)
+      .then((res) => res.json())
+      .then((releases) => {
+        if (!Array.isArray(releases)) return;
+        const total = releases.reduce(
+          (sum: number, release: any) =>
+            sum +
+            (release.assets ?? []).reduce(
+              (assetSum: number, asset: any) =>
+                /\.(zip|exe|msi)$/i.test(asset.name)
+                  ? assetSum + (asset.download_count ?? 0)
+                  : assetSum,
+              0
+            ),
+          0
+        );
+        if (total <= 0) return;
+        const formatted = total.toLocaleString('en-US');
+        counters.forEach((counter) => {
+          const value = counter.querySelector<HTMLElement>('[data-downloads]');
+          if (value) value.textContent = formatted;
+        });
+      })
+      .catch(() => {
+        /* keep the build-time number */
+      });
+  }
+</script>

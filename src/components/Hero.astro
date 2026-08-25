@@ -1,5 +1,6 @@
 ---
 import { getLatestRelease } from '../lib/github';
+import DownloadCounter from './DownloadCounter.astro';
 
 const baseUrl = import.meta.env.BASE_URL;
 const { version, downloadUrl } = await getLatestRelease();
@@ -11,6 +12,7 @@ const { version, downloadUrl } = await getLatestRelease();
       <div class="hero-text">
         <h1>Live <span>Tarkov Map</span> Position Tracker</h1>
         <p class="hero-subtitle">See your real-time position on every Escape from Tarkov map &mdash; Customs, Woods, Shoreline, Lighthouse, Reserve, Streets, Interchange, Factory, and Ground Zero &mdash; synced instantly to tarkov.dev.</p>
+        <DownloadCounter variant="hero" />
         <div class="hero-buttons">
           <a href={downloadUrl} class="btn btn-primary">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
@@ -23,7 +25,7 @@ const { version, downloadUrl } = await getLatestRelease();
         </div>
       </div>
       <div class="hero-visual">
-        <img src={`${baseUrl}ON-512-logo-transparent.png`} alt="Tarkov Nexus App" class="hero-image" style="max-width: 300px; margin: 0 auto; display: block; border: none; box-shadow: 0 0 60px rgba(88, 101, 242, 0.3);">
+        <img src={`${baseUrl}ON-512-logo-transparent.png`} alt="Tarkov Nexus App" class="hero-image">
         <div class="hero-badge">{version}</div>
       </div>
     </div>
