@@ -62,7 +62,8 @@ When you take a screenshot in Tarkov, the game saves your coordinates in the scr
 
 ## Developing the Website
 
-The landing page is a small [Astro](https://astro.build) static site.
+The landing page is a small [Astro](https://astro.build) static site. It lives in
+`website/`; the repository root is the desktop application.
 
 ### Prerequisites
 
@@ -72,6 +73,8 @@ The landing page is a small [Astro](https://astro.build) static site.
 ### Local Development
 
 ```bash
+cd website
+
 # install dependencies
 npm install
 
@@ -89,21 +92,26 @@ npm run preview
 
 ```
 .
-├── public/                # static assets copied as-is to /
-├── src/
-│   ├── components/        # Astro components (Hero, Features, Download, …)
-│   ├── layouts/           # shared page layout
-│   ├── lib/               # helpers (e.g. GitHub release fetcher)
-│   ├── pages/             # routes (index.astro)
-│   └── styles/            # global stylesheet
+├── internal/              # Go backend — websocket, monitor, position, overlay, party
+├── ui-wails/              # Wails desktop app (Go bindings + React frontend)
+├── party-server/          # standalone party hub (separate Go module)
+├── party-markers.user.js  # optional Tampermonkey script for tarkov.dev
+├── website/               # this landing page (Astro)
+│   ├── public/            # static assets copied as-is to /
+│   ├── src/
+│   │   ├── components/    # Astro components (Hero, Features, Download, …)
+│   │   ├── layouts/       # shared page layout
+│   │   ├── lib/           # helpers (e.g. GitHub release fetcher)
+│   │   ├── pages/         # routes (index.astro)
+│   │   └── styles/        # global stylesheet
+│   └── astro.config.mjs   # Astro configuration
 ├── Branding/              # logo and brand assets
-├── astro.config.mjs       # Astro configuration
-└── .github/workflows/     # GitHub Pages deploy workflow
+└── .github/workflows/     # CI and the GitHub Pages deploy workflow
 ```
 
 ### Deployment
 
-The site is automatically built and deployed to GitHub Pages by [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) on every push to `main` and on each new published release.
+The site is automatically built and deployed to GitHub Pages by [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) on every push to `main` and on each new published release. That workflow builds from `website/`, so changes to the application at the repository root do not affect the deployed site.
 
 ## Contributing
 
