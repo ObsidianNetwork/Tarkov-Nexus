@@ -1,22 +1,37 @@
-# Dependencies
-node_modules/
+# Repository root — the Tarkov Nexus desktop application (Go + Wails).
+# The Astro website has its own .gitignore in website/.
 
-# Build output
-dist/
+# Go build output
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+/bin
 
-# Environment variables
+# Wails build artefacts
+ui-wails/build/bin/
+ui-wails/frontend/node_modules/
+ui-wails/frontend/dist/
+
+# Generated Wails bindings are committed; local runtime copies are not
+ui-wails/frontend/package.json.md5
+
+# Local configuration and runtime state — never commit these
+config.json
+config2.json
+ui-wails/config.json
+ui-wails/config2.json
+ui-wails/logs/
+party-server/party.db
 .env
-.env.*
-!.env.example
+.env.local
+.env.*.local
 
-# Editor
+# Editor / OS
 .vscode/
 .idea/
-
-# OS
 .DS_Store
 Thumbs.db
-
-# Astro
-.astro/
-.claude/settings.local.json
