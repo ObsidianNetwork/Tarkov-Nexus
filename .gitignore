@@ -27,6 +27,8 @@ ui-wails/config2.json
 ui-wails/logs/
 party-server/party.db
 .env
+.env.local
+.env.*.local
 
 # Editor / OS
 .vscode/
