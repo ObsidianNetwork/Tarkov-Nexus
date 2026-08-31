@@ -63,7 +63,8 @@ When you take a screenshot in Tarkov, the game saves your coordinates in the scr
 ## Developing the Website
 
 The landing page is a small [Astro](https://astro.build) static site. It lives in
-`website/`; the repository root is the desktop application.
+`website/`, which is where it moved to make room for the desktop application
+source at the repository root — that source is being published here shortly.
 
 ### Prerequisites
 
@@ -92,10 +93,6 @@ npm run preview
 
 ```
 .
-├── internal/              # Go backend — websocket, monitor, position, overlay, party
-├── ui-wails/              # Wails desktop app (Go bindings + React frontend)
-├── party-server/          # standalone party hub (separate Go module)
-├── party-markers.user.js  # optional Tampermonkey script for tarkov.dev
 ├── website/               # this landing page (Astro)
 │   ├── public/            # static assets copied as-is to /
 │   ├── src/
@@ -108,6 +105,9 @@ npm run preview
 ├── Branding/              # logo and brand assets
 └── .github/workflows/     # CI and the GitHub Pages deploy workflow
 ```
+
+The desktop application source will be published to the repository root
+(`internal/`, `ui-wails/`, `party-server/`) in a follow-up. It is not here yet.
 
 ### Deployment
 
