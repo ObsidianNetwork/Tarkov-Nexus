@@ -1,0 +1,203 @@
+name: Release Build and Publish
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'  # Triggers on version tags like v3.0.1, v3.1.0, etc.
+
+jobs:
+  build-and-release:
+    name: Build and Release for Windows
+    runs-on: depot-windows-2025
+    permissions:
+      contents: write  # Required to create releases and upload artifacts
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0  # Fetch all history for release notes generation
+
+      - name: Extract version from tag
+        id: version
+        shell: bash
+        run: |
+          TAG=${GITHUB_REF#refs/tags/}
+          VERSION=${TAG#v}
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION"
+
+      - name: Setup Go
+        uses: actions/setup-go@v7
+        with:
+          go-version: '1.25'
+          cache: true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: ui-wails/frontend/package-lock.json
+
+      # Pinned to v2.15.0 to match the wails/v2 requirement in go.mod —
+      # installing @latest would let the release build drift from the
+      # version the app was tested with in CI.
+      - name: Install Wails CLI
+        shell: bash
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.15.0
+
+      - name: Install Go dependencies
+        run: go mod download
+
+      - name: Install frontend dependencies
+        working-directory: ui-wails/frontend
+        run: npm ci
+
+      - name: Validate version consistency
+        shell: bash
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+
+          # Check version.go
+          VERSION_GO=$(grep -E '(const|var) Version = ' internal/updater/version.go | sed 's/.*"\(.*\)".*/\1/')
+          echo "version.go: $VERSION_GO"
+
+          # Check wails.json
+          VERSION_WAILS=$(grep '"productVersion"' ui-wails/wails.json | sed 's/.*"\(.*\)".*/\1/')
+          echo "wails.json: $VERSION_WAILS"
+
+          # Validate all versions match
+          if [ "$VERSION" != "$VERSION_GO" ]; then
+            echo "Error: Tag version ($VERSION) does not match version.go ($VERSION_GO)"
+            exit 1
+          fi
+
+          if [ "$VERSION" != "$VERSION_WAILS" ]; then
+            echo "Error: Tag version ($VERSION) does not match wails.json ($VERSION_WAILS)"
+            exit 1
+          fi
+
+          echo "Version validation passed: $VERSION"
+
+      - name: Build application
+        working-directory: ui-wails
+        run: |
+          wails build -clean -platform windows/amd64
+
+      - name: Prepare artifacts
+        shell: bash
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          USER_FRIENDLY_NAME="TarkovNexus-v${VERSION}-Windows-x64"
+          UPDATER_NAME="Tarkov-Nexus_windows_amd64"
+
+          # Create temporary directory for packaging
+          mkdir -p release-temp
+
+          # Copy executable and rename
+          cp ui-wails/build/bin/ui-wails.exe release-temp/TarkovNexus.exe
+
+          # Copy documentation
+          cp README.md release-temp/
+
+          # Copy example config if it exists
+          if [ -f "config.json.example" ]; then
+            cp config.json.example release-temp/
+          fi
+
+          # Create user-friendly named zip archive
+          cd release-temp
+          7z a -tzip "../${USER_FRIENDLY_NAME}.zip" *
+          cd ..
+
+          # Create updater-compatible named zip (required by go-github-selfupdate)
+          cp "${USER_FRIENDLY_NAME}.zip" "${UPDATER_NAME}.zip"
+
+          # Generate SHA256 checksums
+          certutil -hashfile "${USER_FRIENDLY_NAME}.zip" SHA256 > "${USER_FRIENDLY_NAME}.zip.sha256"
+          certutil -hashfile "${UPDATER_NAME}.zip" SHA256 > "${UPDATER_NAME}.zip.sha256"
+
+          # Display file info
+          echo "User-friendly archive:"
+          ls -lh "${USER_FRIENDLY_NAME}.zip"
+          echo ""
+          echo "Auto-updater compatible archive:"
+          ls -lh "${UPDATER_NAME}.zip"
+
+      - name: Determine if pre-release
+        id: prerelease
+        shell: bash
+        run: |
+          TAG="${{ steps.version.outputs.tag }}"
+          if [[ "$TAG" =~ (alpha|beta|rc) ]]; then
+            echo "is_prerelease=true" >> $GITHUB_OUTPUT
+            echo "This is a pre-release version"
+          else
+            echo "is_prerelease=false" >> $GITHUB_OUTPUT
+            echo "This is a stable release"
+          fi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          repository: ObsidianNetwork/Tarkov-Nexus
+          name: Tarkov Nexus ${{ steps.version.outputs.tag }}
+          tag_name: ${{ steps.version.outputs.tag }}
+          draft: false
+          prerelease: ${{ steps.prerelease.outputs.is_prerelease }}
+          generate_release_notes: false
+          body: |
+            ## Tarkov Nexus ${{ steps.version.outputs.tag }}
+
+            Real-time position tracking for Escape from Tarkov by integrating with tarkov.dev and tarkovtracker.org.
+
+            ### Installation
+            1. Download `TarkovNexus-v${{ steps.version.outputs.version }}-Windows-x64.zip`
+            2. Extract the archive
+            3. Run `TarkovNexus.exe`
+            4. Follow the setup wizard on first launch
+
+            ### Features
+            - Real-time position updates to tarkov.dev interactive maps
+            - Automatic map detection from game logs
+            - Quest progress synchronization with TarkovTracker
+            - Auto-update system (this release will be detected automatically!)
+            - Dark mode UI with modern design
+
+            ### Verification
+            Verify the download integrity using the included SHA256 checksum file.
+
+            ### System Requirements
+            - Windows 10/11 (64-bit)
+            - Escape from Tarkov installed
+            - Internet connection for tarkov.dev integration
+
+            ### Need Help?
+            - [Documentation](https://github.com/ObsidianNetwork/Tarkov-Nexus)
+            - [Report Issues](https://github.com/ObsidianNetwork/Tarkov-Nexus/issues)
+
+            ---
+            Built with ❤️ using Wails v2 | Go + React
+          files: |
+            TarkovNexus-v${{ steps.version.outputs.version }}-Windows-x64.zip
+            TarkovNexus-v${{ steps.version.outputs.version }}-Windows-x64.zip.sha256
+            Tarkov-Nexus_windows_amd64.zip
+            Tarkov-Nexus_windows_amd64.zip.sha256
+        env:
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+
+      - name: Build Summary
+        shell: bash
+        run: |
+          echo "## Release Build Complete ✅" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** ${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Tag:** ${{ steps.version.outputs.tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Pre-release:** ${{ steps.prerelease.outputs.is_prerelease }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "- TarkovNexus-v${{ steps.version.outputs.version }}-Windows-x64.zip (user download)" >> $GITHUB_STEP_SUMMARY
+          echo "- Tarkov-Nexus_windows_amd64.zip (auto-updater compatible)" >> $GITHUB_STEP_SUMMARY
+          echo "- SHA256 checksums included for both files" >> $GITHUB_STEP_SUMMARY
