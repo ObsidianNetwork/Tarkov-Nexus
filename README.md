@@ -44,6 +44,71 @@ When you take a screenshot in Tarkov, the game saves your coordinates in the scr
 3. **Play** — Load into a raid and press your screenshot key (default: `PrintScreen`).
 4. **See Your Position** — Your marker appears on the tarkov.dev map at your exact coordinates.
 
+## What Tarkov Nexus Sends to tarkov.dev
+
+[tarkov.dev](https://tarkov.dev) is a community-run, open-source project. Its
+remote-control feature — the one that puts your marker on their map — is the
+same one [TarkovMonitor](https://github.com/the-hideout/TarkovMonitor) uses, and
+Tarkov Nexus is built on it. Their servers cost them money and time to run, so
+this section states exactly what we send, in full.
+
+### Over their socket server
+
+Tarkov Nexus opens one connection to `wss://socket.tarkov.dev` and identifies
+itself on the handshake:
+
+```
+Origin: TarkovNexus
+User-Agent: TarkovNexus/<version>
+```
+
+It sends only the two message types their protocol defines, both of which are
+relayed to the browser tab you paired with your Remote ID:
+
+| Message | When | Contents |
+|---|---|---|
+| `command` → `map` | a raid starts, or you pick a map | the map name, e.g. `customs` |
+| `command` → `playerPosition` | you take a screenshot, throttled to at most one per second by default | `x`, `y`, `z`, rotation, and the map name |
+
+Plus a `pong` whenever their server sends a heartbeat.
+
+That is the complete list. Map names are validated against tarkov.dev's own map
+list before sending, so the app cannot navigate your browser to a page that does
+not exist.
+
+**Nothing else is sent.** Earlier versions of Tarkov Nexus also pushed squad
+positions through their socket server using a message type their protocol does
+not define. Their server logged a warning for every one of them, which is why
+tarkov.dev blocked the app in August 2026. That was our mistake; those messages
+have been removed, and squad markers are now drawn entirely on your own machine.
+
+### In the map window
+
+The in-app map window displays tarkov.dev in a frame. Because tarkov.dev sends
+`X-Frame-Options: DENY`, the app runs a local proxy on `127.0.0.1:44444` that
+removes **that one header** so the page can be embedded, and injects a small
+script that draws your squad's markers on the map. Their
+`Content-Security-Policy` and `X-Content-Type-Options` are left intact, their
+cookie-consent prompt is shown to you normally rather than answered on your
+behalf, and their own settings and branding are not modified.
+
+Requests the app makes on your behalf carry `X-Tarkov-Nexus-Version`, so
+tarkov.dev can identify that traffic as ours.
+
+If you would rather not proxy anything, open tarkov.dev in your own browser and
+use it normally — your position marker works there with no proxy at all, since
+that is the supported path their remote-control feature was built for.
+
+### What never leaves your machine
+
+- **Screenshots.** Coordinates are read from the filename locally; the image is
+  never uploaded, and is deleted after processing.
+- **Game logs.** Parsed locally to detect which map you loaded into.
+- **Squad positions.** Shared between party members and drawn on your own
+  machine. They are never sent to tarkov.dev.
+- **Your TarkovTracker token**, if you use quest tracking. It goes only to
+  tarkovtracker.org.
+
 ## Requirements
 
 - Windows 10 or 11 (64-bit)
