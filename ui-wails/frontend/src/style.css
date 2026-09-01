@@ -1,0 +1,207 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@font-face {
+    font-family: "Nunito";
+    font-style: normal;
+    font-weight: 400;
+    src: local(""),
+    url("assets/fonts/nunito-v16-latin-regular.woff2") format("woff2");
+}
+
+/* Obsidian Design System CSS Variables */
+:root {
+    /* Primary Brand Colors */
+    --primary-purple: #5865F2;
+    --dark-purple: #4752C4;
+    --light-purple: #7289DA;
+    --electric-purple: #8B5FBF;
+
+    /* Accent Colors */
+    --neon-green: #00D4AA;
+    --warning: #FEE75C;
+    --error: #ED4245;
+
+    /* Dark Theme Background System */
+    --bg-dark: #0C0E14;
+    --bg-darker: #06080B;
+    --bg-card: #1A1D26;
+    --bg-hover: #232631;
+
+    /* Text Colors */
+    --text-primary: #FFFFFF;
+    --text-secondary: #B9BBBE;
+    --text-muted: #72767D;
+
+    /* Border & Accent */
+    --border-color: #2A2D38;
+}
+
+@layer base {
+    html {
+        @apply h-full;
+        background: transparent;
+    }
+
+    body {
+        @apply h-full m-0 text-white overflow-hidden;
+        background: transparent;
+        font-family: "Nunito", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto",
+        "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
+        sans-serif;
+    }
+
+    #root {
+        @apply h-full overflow-hidden;
+        background: var(--bg-dark);
+        box-shadow: 0 0 0 1px var(--bg-dark);
+    }
+}
+
+@layer components {
+    /* Glassmorphism Card */
+    .glass-card {
+        @apply bg-bg-card/85 backdrop-blur-md border border-border-color/50 rounded-2xl;
+        @apply transition-all duration-300 ease-out;
+    }
+
+    .glass-card:hover {
+        @apply border-primary-purple/50 -translate-y-1;
+        box-shadow: 0 20px 40px rgba(88, 101, 242, 0.15);
+    }
+
+    /* Glass Panel */
+    .glass-panel {
+        @apply bg-bg-card/90 backdrop-blur-lg border border-border-color/30 rounded-xl;
+    }
+
+    /* Glass Input */
+    .glass-input {
+        @apply bg-bg-card/70 backdrop-blur-sm border border-border-color/50 rounded-lg;
+        @apply text-text-primary placeholder-text-muted;
+        @apply transition-all duration-300;
+    }
+
+    .glass-input:focus {
+        @apply border-primary-purple ring-2 ring-primary-purple/20 outline-none;
+        box-shadow: 0 0 20px rgba(88, 101, 242, 0.3);
+    }
+
+    /* Gradient Text */
+    .gradient-text {
+        background: linear-gradient(135deg, var(--primary-purple), var(--electric-purple), var(--neon-green));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        background-size: 200% auto;
+        animation: gradientShift 3s ease infinite;
+    }
+
+    /* Gradient Border */
+    .gradient-border {
+        position: relative;
+    }
+
+    .gradient-border::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        border-radius: inherit;
+        padding: 1px;
+        background: linear-gradient(135deg, var(--primary-purple), var(--electric-purple));
+        -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+        -webkit-mask-composite: xor;
+        mask-composite: exclude;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .gradient-border:hover::before {
+        opacity: 1;
+    }
+
+    /* Hover Lift Effect */
+    .hover-lift {
+        @apply transition-transform duration-300 ease-out;
+    }
+
+    .hover-lift:hover {
+        @apply -translate-y-1;
+    }
+
+    /* Hover Glow Effect */
+    .hover-glow {
+        @apply transition-shadow duration-300;
+    }
+
+    .hover-glow:hover {
+        box-shadow: 0 10px 30px rgba(88, 101, 242, 0.4);
+    }
+
+    /* Status Indicator Pulse */
+    .status-pulse {
+        animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+
+    /* Custom scrollbar */
+    .custom-scrollbar::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-track {
+        @apply bg-bg-darker rounded;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        @apply bg-primary-purple/30 rounded;
+        @apply hover:bg-primary-purple/50;
+    }
+}
+
+@layer utilities {
+    /* Animation delay utilities */
+    .animation-delay-100 {
+        animation-delay: 100ms;
+    }
+
+    .animation-delay-200 {
+        animation-delay: 200ms;
+    }
+
+    .animation-delay-300 {
+        animation-delay: 300ms;
+    }
+
+    .animation-delay-400 {
+        animation-delay: 400ms;
+    }
+
+    .animation-delay-500 {
+        animation-delay: 500ms;
+    }
+
+    /* Text shadow utilities */
+    .text-shadow-glow {
+        text-shadow: 0 0 20px rgba(88, 101, 242, 0.5);
+    }
+
+    .text-shadow-green-glow {
+        text-shadow: 0 0 20px rgba(0, 212, 170, 0.5);
+    }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}

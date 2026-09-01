@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Party Map – Tarkov Nexus</title>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; background: transparent; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; }
+
+    /* Transparent drag bar across full top */
+    #titlebar-drag {
+      position: fixed; top: 0; left: 0; right: 0; height: 32px; z-index: 19;
+      --wails-draggable: drag;
+      -webkit-user-select: none; user-select: none;
+    }
+    /* Buttons float centered on top of drag region */
+    #titlebar {
+      position: fixed; top: 0; left: 50%; transform: translateX(-50%); z-index: 20;
+      display: flex; align-items: center; height: 32px;
+      -webkit-user-select: none; user-select: none;
+    }
+
+    /* Title bar buttons */
+    .tb-btn {
+      display: flex; align-items: center; justify-content: center;
+      width: 32px; height: 32px; border: none; background: transparent;
+      cursor: pointer; color: rgba(156, 163, 175, 0.7);
+      transition: background 0.15s, color 0.15s;
+    }
+    .tb-btn:hover { background: rgba(55, 65, 81, 0.6); color: #e5e7eb; }
+    .tb-btn.close:hover { background: rgba(239, 68, 68, 0.3); color: #ef4444; }
+
+    /* Pin button */
+    #pin-btn.pinned { color: #facc15; background: rgba(250, 204, 21, 0.15); }
+    #pin-btn.pinned:hover { background: rgba(250, 204, 21, 0.25); }
+
+    /* Content area - 6px padding on all sides so resize handles aren't blocked by iframe */
+    #content { position: absolute; inset: 6px; }
+    iframe { display: block; width: 100%; height: 100%; border: none; }
+    #loading {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 14px; background: #0c0e14; z-index: 10;
+    }
+    .spin {
+      width: 36px; height: 36px;
+      border: 3px solid #1f2937; border-top-color: #facc15;
+      border-radius: 50%; animation: spin 0.85s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .logo { color: #facc15; font-size: 15px; font-weight: 800; letter-spacing: 1px; }
+    .sub  { color: #4b5563; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <!-- Invisible drag area for moving the window -->
+  <div id="titlebar-drag" data-wails-drag></div>
+
+  <!-- Minimal floating buttons: pin, minimize, close -->
+  <div id="titlebar">
+    <button id="pin-btn" class="tb-btn" title="Pin on top (overlay)" onclick="togglePin()">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"/>
+      </svg>
+    </button>
+    <button class="tb-btn" title="Minimize" onclick="window.runtime.WindowMinimise()">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    </button>
+    <button class="tb-btn close" title="Close" onclick="window.runtime.Quit()">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+    </button>
+  </div>
+
+  <!-- Map content (full window) -->
+  <div id="content">
+    <div id="loading">
+      <div class="spin"></div>
+      <div class="logo">TARKOV NEXUS</div>
+      <div class="sub">Loading map...</div>
+    </div>
+    <iframe id="map-frame" onload="document.getElementById('loading').style.display='none'"></iframe>
+  </div>
+
+  <script>
+    async function togglePin() {
+      try {
+        const pinned = await window.go.main.MapWindowApp.ToggleAlwaysOnTop();
+        document.getElementById('pin-btn').classList.toggle('pinned', pinned);
+      } catch (e) {
+        console.error('Failed to toggle pin:', e);
+      }
+    }
+  </script>
+</body>
+</html>

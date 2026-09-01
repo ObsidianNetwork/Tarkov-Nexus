@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  party-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: tarkov-party-server
+    restart: unless-stopped
+    ports:
+      - "8765:8765"   # WebSocket API
+      - "8766:8766"   # Web UI Console
+    volumes:
+      - party-data:/app/data
+    environment:
+      - TZ=Australia/Sydney
+    # Enable interactive console
+    stdin_open: true
+    tty: true
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8765/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+      - "net.unraid.docker.webui=http://[IP]:[PORT:8766]/"
+      - "net.unraid.docker.icon=https://raw.githubusercontent.com/ObsidianNetwork/Tarkov-Nexus/main/Branding/Obi_logo.png"
+
+volumes:
+  party-data:
+    driver: local
