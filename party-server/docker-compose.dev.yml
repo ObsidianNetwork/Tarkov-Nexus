@@ -1,0 +1,41 @@
+version: '3.8'
+
+# Development Docker Compose configuration
+# Features:
+#   - Interactive console enabled
+#   - Admin API enabled
+#   - stdin/tty for console interaction
+#   - Volume mount for hot data access
+#
+# Usage:
+#   docker-compose -f docker-compose.dev.yml up --build
+#
+# To attach to the console:
+#   docker attach tarkov-party-server-dev
+#
+# To detach without stopping: Ctrl+P, Ctrl+Q
+
+services:
+  party-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: tarkov-party-server-dev
+    restart: "no"  # Don't auto-restart in dev mode
+    ports:
+      - "8765:8765"
+    volumes:
+      - ./data:/app/data  # Local data directory for easy access
+    environment:
+      - TZ=Australia/Sydney
+    # Enable interactive mode for console
+    stdin_open: true
+    tty: true
+    # Override command to enable dev mode (console + admin API)
+    command: ["-port", "8765", "-data", "/app/data", "-dev"]
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8765/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
