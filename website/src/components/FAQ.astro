@@ -45,14 +45,15 @@ export const faqs = [
 
 <section class="faq" id="faq">
   <div class="container">
-    <div class="section-header">
+    <div class="section-header section-header--center reveal">
+      <span class="eyebrow">FAQ</span>
       <h2>Tarkov Map Tracker &mdash; FAQ</h2>
       <p>Common questions about live position tracking on the Escape from Tarkov map</p>
     </div>
 
     <div class="faq-list">
-      {faqs.map((item) => (
-        <details class="faq-item">
+      {faqs.map((item, i) => (
+        <details class="faq-item reveal" style={`--reveal-delay: ${Math.min(i, 6) * 40}ms`} data-question={item.question}>
           <summary>
             <span>{item.question}</span>
             <svg class="faq-chevron" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="20" height="20">
@@ -70,7 +71,7 @@ export const faqs = [
 
 <style>
   .faq {
-    padding: 5rem 0;
+    padding: 5rem 0 7rem;
   }
 
   .faq-list {
