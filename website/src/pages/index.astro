@@ -10,16 +10,6 @@ import Footer from '../components/Footer.astro';
 
 const siteUrl = 'https://tarkov.nexus';
 
-// Strip HTML entities from FAQ answers for clean JSON-LD output
-const cleanText = (s: string) =>
-  s.replace(/&mdash;/g, '—')
-   .replace(/&ndash;/g, '–')
-   .replace(/&rsquo;/g, '’')
-   .replace(/&lsquo;/g, '‘')
-   .replace(/&rdquo;/g, '”')
-   .replace(/&ldquo;/g, '“')
-   .replace(/&amp;/g, '&');
-
 const softwareSchema = {
   '@context': 'https://schema.org',
   '@type': 'SoftwareApplication',
@@ -73,10 +63,10 @@ const faqSchema = {
   '@type': 'FAQPage',
   mainEntity: faqs.map((f) => ({
     '@type': 'Question',
-    name: cleanText(f.question),
+    name: f.question,
     acceptedAnswer: {
       '@type': 'Answer',
-      text: cleanText(f.answer)
+      text: f.answer
     }
   }))
 };
