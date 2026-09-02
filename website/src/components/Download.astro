@@ -5,12 +5,10 @@ import DownloadCounter from './DownloadCounter.astro';
 const { version, downloadUrl } = await getLatestRelease();
 
 // ── Beta channel ─────────────────────────────────────────────────────────────
-// PLACEHOLDER: until the beta branch ships, the button points at the releases
-// page. When the beta release is live, swap `url` for the real asset URL and
-// `version` for the beta tag (see DESIGN.md §7 and the memory note).
+// Live beta release. When a new beta ships, update `url` and `version` here.
 const BETA = {
-  version: 'TBA',
-  url: 'https://github.com/ObsidianNetwork/Tarkov-Nexus/releases'
+  version: 'v3.3.4-beta.1',
+  url: 'https://github.com/ObsidianNetwork/Tarkov-Nexus/releases/download/v3.3.4-beta.1/TarkovNexus-v3.3.4-beta.1-Windows-x64.zip'
 };
 
 const checkIcon = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>`;
