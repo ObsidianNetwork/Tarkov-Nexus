@@ -139,6 +139,6 @@ Implement links with `data-analytics` + typed data attributes; the tracker in
 
 - `aggregateRating` in JSON-LD is a self-assigned 5/1 rating — SEO risk if
   flagged; kept from the original site.
-- Beta download URL is a placeholder pointing at the releases page until the
-  beta branch ships; swap `BETA` constant in `Download.astro` when live.
+- Beta download links to the live `v3.3.4-beta.1` Windows-x64 asset; update the
+  `BETA` constant in `Download.astro` (url + version) whenever a new beta ships.
 - FAQ is accordion-style; acceptable for 10 items, revisit if it grows.
