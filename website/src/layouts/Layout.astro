@@ -9,7 +9,6 @@ import '@fontsource/inter/700.css';
 import '@fontsource/jetbrains-mono/400.css';
 import '@fontsource/jetbrains-mono/600.css';
 import Analytics from '../components/Analytics.astro';
-import Notice from '../components/Notice.astro';
 import FeedbackButton from '../components/FeedbackButton.astro';
 
 interface Props {
@@ -84,7 +83,6 @@ const ogImage = new URL(image, siteUrl).href;
   <a class="skip-link" href="#main">Skip to content</a>
   <slot />
   <FeedbackButton />
-  <Notice />
 
   <script>
     // Scroll reveal: mark sections/cards visible as they enter the viewport.
