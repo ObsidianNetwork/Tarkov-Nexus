@@ -52,7 +52,6 @@
   /* Z-index scale (DESIGN.md §1) */
   --z-header: 100;
   --z-fab: 150;
-  --z-notice: 200;
 }
 
 html { scroll-behavior: smooth; }
@@ -79,7 +78,7 @@ body {
   position: fixed;
   top: -100%;
   left: 1rem;
-  z-index: calc(var(--z-notice) + 1);
+  z-index: calc(var(--z-fab) + 1);
   padding: 0.75rem 1.25rem;
   background: var(--primary-purple);
   color: #fff;
@@ -829,7 +828,7 @@ footer {
 }
 
 /* --------------------------------------------------------------------------
-   Feedback FAB (DESIGN.md §1 z-index: notice renders above it)
+   Feedback FAB (DESIGN.md §1 z-index scale)
    -------------------------------------------------------------------------- */
 
 .feedback-fab {
