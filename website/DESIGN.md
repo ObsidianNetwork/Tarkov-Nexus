@@ -22,7 +22,7 @@ material (text fills, glows), never as the base surface.
 | `--light-purple` | `#7289DA` | Hover accents |
 | `--electric-purple` | `#8B5FBF` | Secondary gradient partner, beta accent |
 | `--neon-green` | `#00D4AA` | Live data, success, version numbers |
-| `--amber` | `#F0A020` | Beta channel, warnings, notice |
+| `--amber` | `#F0A020` | Beta channel, warnings |
 | `--bg-darker` | `#06080B` | Page base |
 | `--bg-dark` | `#0C0E14` | Alternating section background |
 | `--bg-card` | `#1A1D26` | Card surface |
@@ -61,9 +61,7 @@ Shadows are tinted (purple-black, never pure black):
 
 ### Z-index scale
 
-`bg: -1` · `content: auto` · `header: 100` · `notice: 200` · `fab: 150` ·
-notice renders above the FAB when both are visible (notice bottom offset
-clears the FAB).
+`bg: -1` · `content: auto` · `header: 100` · `fab: 150`
 
 ### Motion
 
