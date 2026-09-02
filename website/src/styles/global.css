@@ -1,11 +1,19 @@
+/* ============================================================================
+   Tarkov Nexus — global styles.
+   The design contract lives in website/DESIGN.md; every value below comes
+   from a token there. Change the token, not the component.
+   ========================================================================== */
+
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
+  /* Color — see DESIGN.md §1 */
   --primary-purple: #5865F2;
   --dark-purple: #4752C4;
   --light-purple: #7289DA;
   --electric-purple: #8B5FBF;
   --neon-green: #00D4AA;
+  --amber: #F0A020;
   --bg-dark: #0C0E14;
   --bg-darker: #06080B;
   --bg-card: #1A1D26;
@@ -14,6 +22,36 @@
   --text-secondary: #B9BBBE;
   --text-muted: #72767D;
   --border-color: #2A2D38;
+  --border-bright: #3D4150;
+
+  /* Type */
+  --font-display: 'Space Grotesk', var(--font-body);
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'Cascadia Code', monospace;
+
+  /* Radius */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --radius-full: 999px;
+
+  /* Elevation — tinted, never pure black (DESIGN.md §1) */
+  --shadow-card: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 8px 24px -12px rgba(3, 5, 10, 0.8);
+  --shadow-pop: 0 24px 48px -16px rgba(3, 5, 10, 0.9);
+  --glow-primary: 0 0 24px rgba(88, 101, 242, 0.45);
+  --glow-primary-strong: 0 4px 32px rgba(88, 101, 242, 0.6);
+  --glow-green: 0 0 20px rgba(0, 212, 170, 0.35);
+  --glow-amber: 0 0 24px rgba(240, 160, 32, 0.35);
+
+  /* Motion */
+  --t-fast: 150ms;
+  --t-med: 250ms;
+  --t-slow: 400ms;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* Z-index scale (DESIGN.md §1) */
+  --z-header: 100;
+  --z-fab: 150;
 }
 
 html { scroll-behavior: smooth; }
@@ -23,45 +61,124 @@ html { scroll-behavior: smooth; }
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+  font-family: var(--font-body);
   background: var(--bg-darker);
   color: var(--text-primary);
   line-height: 1.6;
-  min-height: 100vh;
+  min-height: 100svh;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
-/* Background gradient */
+/* --------------------------------------------------------------------------
+   Skip link + focus
+   -------------------------------------------------------------------------- */
+
+.skip-link {
+  position: fixed;
+  top: -100%;
+  left: 1rem;
+  z-index: calc(var(--z-fab) + 1);
+  padding: 0.75rem 1.25rem;
+  background: var(--primary-purple);
+  color: #fff;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  text-decoration: none;
+  transition: top var(--t-fast) var(--ease-out);
+}
+
+.skip-link:focus-visible {
+  top: 1rem;
+}
+
+:focus-visible {
+  outline: 2px solid var(--primary-purple);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* --------------------------------------------------------------------------
+   Background: purple washes + grain
+   -------------------------------------------------------------------------- */
+
 .bg-gradient {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
   background:
-    radial-gradient(ellipse at 20% 20%, rgba(88, 101, 242, 0.15) 0%, transparent 50%),
-    radial-gradient(ellipse at 80% 80%, rgba(139, 95, 191, 0.1) 0%, transparent 50%),
+    radial-gradient(ellipse 60% 50% at 20% 15%, rgba(88, 101, 242, 0.14) 0%, transparent 55%),
+    radial-gradient(ellipse 50% 45% at 82% 80%, rgba(139, 95, 191, 0.1) 0%, transparent 55%),
+    radial-gradient(ellipse 40% 35% at 55% 45%, rgba(0, 212, 170, 0.04) 0%, transparent 60%),
     var(--bg-darker);
   z-index: -1;
 }
 
-/* Container */
+/* Subtle grain so the dark surfaces don't read as flat digital voids. */
+.bg-gradient::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.35'/%3E%3C/svg%3E");
+  opacity: 0.05;
+  pointer-events: none;
+}
+
+/* --------------------------------------------------------------------------
+   Container
+   -------------------------------------------------------------------------- */
+
 .container {
   max-width: 1200px;
   margin: 0 auto;
   padding: 0 1.5rem;
 }
 
-/* Header */
+main { display: block; }
+
+/* Anchored sections land below the fixed header, never underneath it. */
+[id] { scroll-margin-top: 5.5rem; }
+
+/* --------------------------------------------------------------------------
+   Scroll reveal (DESIGN.md §1 Motion)
+   -------------------------------------------------------------------------- */
+
+/* Scoped under .js so content is never hidden when scripting is unavailable. */
+html.js .reveal {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity var(--t-slow) var(--ease-out), transform var(--t-slow) var(--ease-out);
+  transition-delay: var(--reveal-delay, 0ms);
+}
+
+html.js .reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.js .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Header
+   -------------------------------------------------------------------------- */
+
 header {
-  padding: 1rem 0;
+  padding: 0.875rem 0;
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
-  background: rgba(6, 8, 11, 0.8);
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid var(--border-color);
-  z-index: 100;
+  background: rgba(6, 8, 11, 0.72);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(42, 45, 56, 0.7);
+  box-shadow: 0 8px 24px -16px rgba(3, 5, 10, 0.9);
+  z-index: var(--z-header);
 }
 
 .header-content {
@@ -79,11 +196,14 @@ header {
 .logo {
   width: 40px;
   height: 40px;
+  filter: drop-shadow(0 0 12px rgba(88, 101, 242, 0.35));
 }
 
 .logo-text {
+  font-family: var(--font-display);
   font-size: 1.25rem;
   font-weight: 700;
+  letter-spacing: -0.02em;
   background: linear-gradient(135deg, var(--primary-purple), var(--electric-purple));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -92,85 +212,61 @@ header {
 
 .nav-links {
   display: flex;
-  gap: 2rem;
+  align-items: center;
+  gap: 1.75rem;
 }
 
 .nav-links a {
   color: var(--text-secondary);
   text-decoration: none;
   font-size: 0.9rem;
-  transition: color 0.2s;
+  font-weight: 500;
+  transition: color var(--t-fast) var(--ease-out);
 }
 
 .nav-links a:hover {
   color: var(--text-primary);
 }
 
-/* Hero Section */
-.hero {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  padding-top: 80px;
-}
-
-.hero-content {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 4rem;
-  align-items: center;
-}
-
-.hero-text h1 {
-  font-size: 3.5rem;
-  font-weight: 800;
-  line-height: 1.1;
-  margin-bottom: 1.5rem;
-}
-
-.hero-text h1 span {
-  background: linear-gradient(135deg, var(--primary-purple), var(--neon-green));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.hero-text p {
-  font-size: 1.25rem;
-  color: var(--text-secondary);
-  margin-bottom: 2rem;
-  max-width: 500px;
-}
-
-.hero-buttons {
-  display: flex;
-  gap: 1rem;
-  flex-wrap: wrap;
-}
+/* --------------------------------------------------------------------------
+   Buttons (DESIGN.md §2)
+   -------------------------------------------------------------------------- */
 
 .btn {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
   padding: 0.875rem 1.75rem;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   font-size: 1rem;
   font-weight: 600;
   text-decoration: none;
-  transition: all 0.2s;
+  transition: transform var(--t-fast) var(--ease-out),
+              box-shadow var(--t-fast) var(--ease-out),
+              background var(--t-fast) var(--ease-out),
+              border-color var(--t-fast) var(--ease-out);
   cursor: pointer;
   border: none;
+  will-change: transform;
+}
+
+.btn:hover { transform: translateY(-2px); }
+.btn:active { transform: scale(0.98); }
+
+.btn svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
 }
 
 .btn-primary {
   background: linear-gradient(135deg, var(--primary-purple), var(--dark-purple));
   color: white;
-  box-shadow: 0 0 20px rgba(88, 101, 242, 0.4);
+  box-shadow: var(--glow-primary), inset 0 1px 0 rgba(255, 255, 255, 0.18);
 }
 
 .btn-primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 0 30px rgba(88, 101, 242, 0.6);
+  box-shadow: var(--glow-primary-strong), inset 0 1px 0 rgba(255, 255, 255, 0.18);
 }
 
 .btn-secondary {
@@ -184,20 +280,124 @@ header {
   border-color: var(--primary-purple);
 }
 
-.btn svg {
-  width: 20px;
-  height: 20px;
+.btn-beta {
+  background: rgba(240, 160, 32, 0.08);
+  color: var(--amber);
+  border: 1px solid rgba(240, 160, 32, 0.45);
+}
+
+.btn-beta:hover {
+  background: rgba(240, 160, 32, 0.14);
+  border-color: var(--amber);
+  box-shadow: var(--glow-amber);
+}
+
+/* --------------------------------------------------------------------------
+   Hero
+   -------------------------------------------------------------------------- */
+
+.hero {
+  min-height: 100svh;
+  display: flex;
+  align-items: center;
+  padding-top: 96px;
+  padding-bottom: 4rem;
+}
+
+.hero-content {
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  gap: 4rem;
+  align-items: center;
+}
+
+/* p.hero-eyebrow out-specifies .hero-eyebrow, so match its specificity. */
+.hero-text p.hero-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  padding: 0.4rem 0.9rem;
+  background: rgba(88, 101, 242, 0.1);
+  border: 1px solid rgba(88, 101, 242, 0.3);
+  border-radius: var(--radius-full);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--light-purple);
+  max-width: none;
+}
+
+.hero-eyebrow::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--neon-green);
+  box-shadow: var(--glow-green);
+}
+
+.hero-text h1 {
+  font-family: var(--font-display);
+  font-size: clamp(2.5rem, 6vw, 4.25rem);
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+  margin-bottom: 1.5rem;
+}
+
+.hero-text h1 span {
+  background: linear-gradient(135deg, var(--primary-purple), var(--neon-green));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hero-text p {
+  font-size: 1.2rem;
+  color: var(--text-secondary);
+  margin-bottom: 2.25rem;
+  max-width: 540px;
+  text-wrap: pretty;
+}
+
+.hero-buttons {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
 }
 
 .hero-visual {
   position: relative;
-  width: 300px;
+  width: 100%;
+  max-width: 340px;
   margin: 0 auto;
+  display: flex;
+  justify-content: center;
+}
+
+/* Halo ring behind the app logo: pure transform/opacity, cheap to composite. */
+.hero-visual::before {
+  content: '';
+  position: absolute;
+  inset: -18%;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, rgba(88, 101, 242, 0.22) 0%, transparent 60%),
+    radial-gradient(circle at 70% 75%, rgba(139, 95, 191, 0.16) 0%, transparent 55%);
+  filter: blur(8px);
+  pointer-events: none;
 }
 
 .hero-image {
   display: block;
   width: 100%;
+  /* The width/height attributes (CLS) must not pin height when CSS
+     scales the width down on small screens — that squashes the logo. */
+  height: auto;
   max-width: 300px;
   margin: 0 auto;
   filter: drop-shadow(0 0 60px rgba(88, 101, 242, 0.35));
@@ -206,28 +406,37 @@ header {
 .hero-badge {
   position: absolute;
   top: 0;
-  right: -0.5rem;
-  background: var(--neon-green);
-  color: var(--bg-darker);
+  right: 0;
+  padding: 0.45rem 1rem;
+  background: var(--bg-card);
+  border: 1px solid var(--neon-green);
+  color: var(--neon-green);
   padding: 0.5rem 1rem;
-  border-radius: 20px;
-  font-size: 0.875rem;
-  font-weight: 700;
+  border-radius: var(--radius-full);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  font-weight: 600;
+  box-shadow: var(--glow-green);
 }
 
-/* Features Section */
+/* --------------------------------------------------------------------------
+   Sections
+   -------------------------------------------------------------------------- */
+
 .features {
-  padding: 6rem 0;
+  padding: 7rem 0;
 }
 
 .section-header {
-  text-align: center;
   margin-bottom: 4rem;
 }
 
 .section-header h2 {
-  font-size: 2.5rem;
+  font-family: var(--font-display);
+  font-size: clamp(1.9rem, 3.5vw, 2.6rem);
   font-weight: 700;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
   margin-bottom: 1rem;
 }
 
@@ -235,27 +444,78 @@ header {
   color: var(--text-secondary);
   font-size: 1.125rem;
   max-width: 600px;
+  text-wrap: pretty;
+}
+
+.section-header--center {
+  text-align: center;
+}
+
+.section-header--center p {
   margin: 0 auto;
 }
+
+.eyebrow {
+  display: inline-block;
+  margin-bottom: 1rem;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--neon-green);
+}
+
+/* --------------------------------------------------------------------------
+   Features — bento grid (DESIGN.md §3)
+   -------------------------------------------------------------------------- */
 
 .features-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 2rem;
+  gap: 1.5rem;
 }
 
 .feature-card {
   background: var(--bg-card);
   border: 1px solid var(--border-color);
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   padding: 2rem;
-  transition: all 0.3s;
+  position: relative;
+  overflow: hidden;
+  transition: transform var(--t-med) var(--ease-out),
+              border-color var(--t-med) var(--ease-out),
+              box-shadow var(--t-med) var(--ease-out);
+}
+
+/* Inset top highlight gives the surface a lit edge. */
+.feature-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(88, 101, 242, 0.5), transparent);
+  opacity: 0;
+  transition: opacity var(--t-med) var(--ease-out);
 }
 
 .feature-card:hover {
-  border-color: var(--primary-purple);
   transform: translateY(-4px);
-  box-shadow: 0 0 30px rgba(88, 101, 242, 0.2);
+  border-color: rgba(88, 101, 242, 0.5);
+  box-shadow: var(--shadow-pop);
+}
+
+.feature-card:hover::before {
+  opacity: 1;
+}
+
+.feature-card--wide {
+  grid-column: span 2;
+  background:
+    linear-gradient(135deg, rgba(88, 101, 242, 0.12), rgba(139, 95, 191, 0.06) 60%, transparent),
+    var(--bg-card);
 }
 
 .feature-icon {
@@ -267,6 +527,7 @@ header {
   align-items: center;
   justify-content: center;
   margin-bottom: 1.25rem;
+  box-shadow: 0 4px 16px -4px rgba(88, 101, 242, 0.5);
 }
 
 .feature-icon svg {
@@ -276,20 +537,28 @@ header {
 }
 
 .feature-card h3 {
-  font-size: 1.25rem;
+  font-family: var(--font-display);
+  font-size: 1.2rem;
   font-weight: 600;
+  letter-spacing: -0.01em;
   margin-bottom: 0.75rem;
 }
 
 .feature-card p {
   color: var(--text-secondary);
   font-size: 0.95rem;
+  text-wrap: pretty;
 }
 
-/* How it Works */
+/* --------------------------------------------------------------------------
+   How it works
+   -------------------------------------------------------------------------- */
+
 .how-it-works {
-  padding: 6rem 0;
+  padding: 7rem 0;
   background: var(--bg-dark);
+  border-top: 1px solid rgba(42, 45, 56, 0.6);
+  border-bottom: 1px solid rgba(42, 45, 56, 0.6);
 }
 
 .steps {
@@ -311,7 +580,7 @@ header {
   right: -1rem;
   width: calc(100% - 4rem);
   height: 2px;
-  background: linear-gradient(90deg, var(--primary-purple), transparent);
+  background: linear-gradient(90deg, rgba(88, 101, 242, 0.6), transparent);
   z-index: 0;
 }
 
@@ -323,14 +592,17 @@ header {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.5rem;
+  font-family: var(--font-mono);
+  font-size: 1.375rem;
   font-weight: 700;
   margin: 0 auto 1.25rem;
   position: relative;
   z-index: 1;
+  box-shadow: 0 0 0 6px rgba(88, 101, 242, 0.12), var(--glow-primary);
 }
 
 .step h3 {
+  font-family: var(--font-display);
   font-size: 1.125rem;
   font-weight: 600;
   margin-bottom: 0.5rem;
@@ -339,40 +611,71 @@ header {
 .step p {
   color: var(--text-secondary);
   font-size: 0.9rem;
+  text-wrap: pretty;
 }
 
-/* Download Section */
+/* --------------------------------------------------------------------------
+   Download — stable + beta channels
+   -------------------------------------------------------------------------- */
+
 .download {
-  padding: 6rem 0;
-  text-align: center;
+  padding: 7rem 0;
+}
+
+.download-grid {
+  display: grid;
+  grid-template-columns: 1.25fr 1fr;
+  gap: 1.5rem;
+  max-width: 900px;
+  margin: 0 auto;
+  align-items: stretch;
 }
 
 .download-card {
-  background: linear-gradient(135deg, rgba(88, 101, 242, 0.1), rgba(139, 95, 191, 0.1));
+  background:
+    linear-gradient(160deg, rgba(88, 101, 242, 0.1), rgba(139, 95, 191, 0.06) 55%, transparent),
+    var(--bg-card);
   border: 1px solid var(--border-color);
-  border-radius: 20px;
-  padding: 4rem;
-  max-width: 700px;
-  margin: 0 auto;
+  border-radius: var(--radius-lg);
+  padding: 3rem;
+  display: flex;
+  flex-direction: column;
+  text-align: center;
+  box-shadow: var(--shadow-card);
+}
+
+.download-card--beta {
+  background:
+    linear-gradient(160deg, rgba(240, 160, 32, 0.08), transparent 60%),
+    var(--bg-card);
+  border-color: rgba(240, 160, 32, 0.3);
 }
 
 .download-card h2 {
-  font-size: 2rem;
-  margin-bottom: 1rem;
+  font-family: var(--font-display);
+  font-size: 1.9rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-bottom: 0.5rem;
 }
 
 .download-card p {
   color: var(--text-secondary);
   margin-bottom: 2rem;
+  text-wrap: pretty;
 }
 
 .version-badge {
-  display: inline-block;
-  background: var(--bg-card);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  align-self: center;
+  background: rgba(6, 8, 11, 0.6);
   border: 1px solid var(--border-color);
   padding: 0.5rem 1rem;
-  border-radius: 20px;
-  font-size: 0.875rem;
+  border-radius: var(--radius-full);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
   color: var(--text-secondary);
   margin-bottom: 2rem;
 }
@@ -382,11 +685,40 @@ header {
   font-weight: 600;
 }
 
+.version-badge--beta span {
+  color: var(--amber);
+}
+
+.channel-chip {
+  align-self: center;
+  margin-bottom: 1.25rem;
+  padding: 0.3rem 0.85rem;
+  border-radius: var(--radius-full);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.channel-chip--stable {
+  background: rgba(0, 212, 170, 0.1);
+  border: 1px solid rgba(0, 212, 170, 0.35);
+  color: var(--neon-green);
+}
+
+.channel-chip--beta {
+  background: rgba(240, 160, 32, 0.1);
+  border: 1px solid rgba(240, 160, 32, 0.35);
+  color: var(--amber);
+}
+
 .download-buttons {
   display: flex;
   gap: 1rem;
   justify-content: center;
   flex-wrap: wrap;
+  margin-top: auto;
 }
 
 .system-req {
@@ -396,7 +728,11 @@ header {
 }
 
 .system-req h4 {
-  font-size: 0.875rem;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
   color: var(--text-muted);
   margin-bottom: 0.75rem;
 }
@@ -421,12 +757,33 @@ header {
   width: 16px;
   height: 16px;
   color: var(--neon-green);
+  flex-shrink: 0;
 }
 
-/* Footer */
+.beta-note {
+  margin-top: 1.5rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.beta-note a {
+  color: var(--amber);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.beta-note a:hover {
+  text-decoration: underline;
+}
+
+/* --------------------------------------------------------------------------
+   Footer
+   -------------------------------------------------------------------------- */
+
 footer {
   padding: 3rem 0;
-  border-top: 1px solid var(--border-color);
+  border-top: 1px solid rgba(42, 45, 56, 0.7);
+  background: rgba(6, 8, 11, 0.5);
 }
 
 .footer-content {
@@ -446,6 +803,7 @@ footer {
 .footer-left img {
   width: 32px;
   height: 32px;
+  border-radius: 8px;
 }
 
 .footer-left span {
@@ -462,15 +820,63 @@ footer {
   color: var(--text-muted);
   text-decoration: none;
   font-size: 0.875rem;
-  transition: color 0.2s;
+  transition: color var(--t-fast) var(--ease-out);
 }
 
 .footer-links a:hover {
   color: var(--text-primary);
 }
 
-/* Responsive */
+/* --------------------------------------------------------------------------
+   Feedback FAB (DESIGN.md §1 z-index scale)
+   -------------------------------------------------------------------------- */
+
+.feedback-fab {
+  position: fixed;
+  right: 1.5rem;
+  bottom: 1.5rem;
+  z-index: var(--z-fab);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.7rem 1.1rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-full);
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+  box-shadow: var(--shadow-pop);
+  transition: color var(--t-fast) var(--ease-out),
+              border-color var(--t-fast) var(--ease-out),
+              transform var(--t-fast) var(--ease-out),
+              box-shadow var(--t-fast) var(--ease-out);
+}
+
+.feedback-fab:hover {
+  color: var(--text-primary);
+  border-color: var(--primary-purple);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-pop), var(--glow-primary);
+}
+
+.feedback-fab svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+/* --------------------------------------------------------------------------
+   Responsive
+   -------------------------------------------------------------------------- */
+
 @media (max-width: 1024px) {
+  .hero {
+    padding-top: 112px;
+    padding-bottom: 3rem;
+  }
+
   .hero-content {
     grid-template-columns: 1fr;
     text-align: center;
@@ -487,12 +893,15 @@ footer {
 
   .hero-visual {
     order: -1;
-    max-width: 500px;
-    margin: 0 auto;
+    max-width: 280px;
   }
 
   .features-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .feature-card--wide {
+    grid-column: span 2;
   }
 
   .steps {
@@ -502,6 +911,10 @@ footer {
   .step:not(:last-child)::after {
     display: none;
   }
+
+  .download-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 640px) {
@@ -509,12 +922,31 @@ footer {
     font-size: 2.5rem;
   }
 
+  .hero-text p.hero-eyebrow {
+    font-size: 0.68rem;
+    letter-spacing: 0.1em;
+    white-space: nowrap;
+  }
+
   .nav-links {
     display: none;
   }
 
+  .features {
+    padding: 4rem 0;
+  }
+
+  .how-it-works,
+  .download {
+    padding: 4rem 0;
+  }
+
   .features-grid {
     grid-template-columns: 1fr;
+  }
+
+  .feature-card--wide {
+    grid-column: auto;
   }
 
   .steps {
@@ -533,5 +965,20 @@ footer {
   .footer-content {
     flex-direction: column;
     text-align: center;
+  }
+
+  .feedback-fab {
+    right: 1rem;
+    bottom: 1rem;
+  }
+
+  .feedback-fab .feedback-fab-label {
+    /* Icon-only on small screens to stay out of the way. */
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
   }
 }

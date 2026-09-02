@@ -8,12 +8,13 @@ const baseUrl = import.meta.env.BASE_URL;
       <img src={`${baseUrl}ON-512-logo-transparent.png`} alt="Tarkov Nexus" class="logo">
       <span class="logo-text">Tarkov Nexus</span>
     </div>
-    <nav class="nav-links">
-      <a href="#features">Features</a>
-      <a href="#how-it-works">How It Works</a>
-      <a href="#download">Download</a>
-      <a href="#faq">FAQ</a>
-      <a href="https://github.com/ObsidianNetwork/Tarkov-Nexus/releases" target="_blank">GitHub</a>
+    <nav class="nav-links" aria-label="Main navigation">
+      <a href="#features" data-analytics="nav" data-nav-item="features">Features</a>
+      <a href="#how-it-works" data-analytics="nav" data-nav-item="how-it-works">How It Works</a>
+      <a href="#download" data-analytics="nav" data-nav-item="download">Download</a>
+      <a href="#beta" data-analytics="nav" data-nav-item="beta">Beta</a>
+      <a href="#faq" data-analytics="nav" data-nav-item="faq">FAQ</a>
+      <a href="https://github.com/ObsidianNetwork/Tarkov-Nexus/releases" target="_blank" data-analytics="nav" data-nav-item="github">GitHub</a>
     </nav>
   </div>
 </header>
