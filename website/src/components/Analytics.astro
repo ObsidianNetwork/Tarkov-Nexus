@@ -2,6 +2,9 @@
 // GA4 Measurement ID is injected at build time (see .github/workflows/deploy.yml).
 // With no ID configured the component renders nothing, so local dev and forks
 // never send traffic to Analytics.
+//
+// Event contract: see website/DESIGN.md §6. Links and controls declare intent
+// with data attributes; this component is the only place that calls gtag().
 const gaId = import.meta.env.PUBLIC_GA_ID;
 ---
 
@@ -18,23 +21,72 @@ const gaId = import.meta.env.PUBLIC_GA_ID;
       gtag('js', new Date());
       gtag('config', gaId);
 
-      // Explicit download tracking: GA4's automatic file_download event misses
-      // GitHub release URLs on some browsers, and this also captures which
-      // button and version the click came from.
+      // ── download_click ────────────────────────────────────────────────────
+      // Explicit release-asset tracking: GA4's automatic file_download misses
+      // GitHub release URLs on some browsers. channel (stable|beta) comes from
+      // the link's data-channel, location from the enclosing section.
       document.addEventListener('click', (event) => {
         const link = event.target.closest?.('a[href]');
         if (!link) return;
 
+        // ── feedback_click ──────────────────────────────────────────────────
+        if (link.dataset.analytics === 'feedback') {
+          gtag('event', 'feedback_click', {
+            entry_point: link.dataset.entryPoint || 'unknown',
+            link_url: link.href
+          });
+          return;
+        }
+
+        // ── nav_click ───────────────────────────────────────────────────────
+        if (link.dataset.analytics === 'nav') {
+          gtag('event', 'nav_click', {
+            nav_item: link.dataset.navItem || 'unknown',
+            destination: link.href
+          });
+        }
+
+        // ── download_click ──────────────────────────────────────────────────
         const href = link.href;
         const isRelease = /\/releases\/download\//.test(href) || /\.(zip|exe|msi)$/i.test(href);
-        if (!isRelease) return;
-
-        gtag('event', 'download_click', {
-          link_url: href,
-          file_name: href.split('/').pop(),
-          location: link.closest('section')?.id || 'hero'
-        });
+        if (isRelease) {
+          gtag('event', 'download_click', {
+            channel: link.dataset.channel || 'stable',
+            location: link.closest('section')?.id || 'unknown',
+            file_name: href.split('/').pop() || '',
+            link_url: href
+          });
+        }
       });
+
+      // ── faq_open ──────────────────────────────────────────────────────────
+      document.addEventListener('toggle', (event) => {
+        const details = event.target;
+        if (details.tagName === 'DETAILS' && details.open && details.dataset.question) {
+          gtag('event', 'faq_open', { question: details.dataset.question });
+        }
+      }, true);
+
+      // ── section_view ──────────────────────────────────────────────────────
+      // Fire once per section when it is mostly on screen, so the dashboard
+      // shows how far visitors actually read.
+      const sections = document.querySelectorAll('main section[id]');
+      if ('IntersectionObserver' in window) {
+        const seen = new Set();
+        const sectionObserver = new IntersectionObserver(
+          (entries) => {
+            for (const entry of entries) {
+              if (entry.isIntersecting && !seen.has(entry.target.id)) {
+                seen.add(entry.target.id);
+                gtag('event', 'section_view', { section_id: entry.target.id });
+                sectionObserver.unobserve(entry.target);
+              }
+            }
+          },
+          { threshold: 0.4 }
+        );
+        sections.forEach((s) => sectionObserver.observe(s));
+      }
     </script>
   </Fragment>
 )}

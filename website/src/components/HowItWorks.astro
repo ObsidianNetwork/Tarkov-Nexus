@@ -25,13 +25,14 @@ const steps = [
 
 <section class="how-it-works" id="how-it-works">
   <div class="container">
-    <div class="section-header">
+    <div class="section-header section-header--center reveal">
+      <span class="eyebrow">How It Works</span>
       <h2>How the Tarkov Map Tracker Works</h2>
       <p>Get live position sync on any Tarkov map in under a minute</p>
     </div>
     <div class="steps">
-      {steps.map((step) => (
-        <div class="step">
+      {steps.map((step, i) => (
+        <div class="step reveal" style={`--reveal-delay: ${i * 80}ms`}>
           <div class="step-number">{step.number}</div>
           <h3>{step.title}</h3>
           <p>{step.description}</p>
@@ -39,7 +40,7 @@ const steps = [
       ))}
     </div>
 
-    <div class="explanation-box">
+    <div class="explanation-box reveal">
       <p class="explanation-label">
         <strong>How does it work?</strong>
       </p>

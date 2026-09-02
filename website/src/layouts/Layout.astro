@@ -1,6 +1,16 @@
 ---
+import '../styles/global.css';
+import '@fontsource/space-grotesk/600.css';
+import '@fontsource/space-grotesk/700.css';
+import '@fontsource/inter/400.css';
+import '@fontsource/inter/500.css';
+import '@fontsource/inter/600.css';
+import '@fontsource/inter/700.css';
+import '@fontsource/jetbrains-mono/400.css';
+import '@fontsource/jetbrains-mono/600.css';
 import Analytics from '../components/Analytics.astro';
 import Notice from '../components/Notice.astro';
+import FeedbackButton from '../components/FeedbackButton.astro';
 
 interface Props {
   title?: string;
@@ -64,15 +74,40 @@ const ogImage = new URL(image, siteUrl).href;
 
   <slot name="head" />
 
+  <!-- Marks scripting as available before first paint; reveal styles key off it. -->
+  <script is:inline>document.documentElement.classList.add('js');</script>
+
   <Analytics />
 </head>
 <body>
   <div class="bg-gradient"></div>
+  <a class="skip-link" href="#main">Skip to content</a>
   <slot />
+  <FeedbackButton />
   <Notice />
+
+  <script>
+    // Scroll reveal: mark sections/cards visible as they enter the viewport.
+    // Reduced-motion users get the final state immediately via CSS.
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const targets = document.querySelectorAll('.reveal');
+
+    if (reduceMotion || !('IntersectionObserver' in window)) {
+      targets.forEach((el) => el.classList.add('is-visible'));
+    } else {
+      const observer = new IntersectionObserver(
+        (entries) => {
+          for (const entry of entries) {
+            if (entry.isIntersecting) {
+              entry.target.classList.add('is-visible');
+              observer.unobserve(entry.target);
+            }
+          }
+        },
+        { rootMargin: '0px 0px -10% 0px', threshold: 0.15 }
+      );
+      targets.forEach((el) => observer.observe(el));
+    }
+  </script>
 </body>
 </html>
-
-<style is:global>
-  @import '../styles/global.css';
-</style>
