@@ -396,6 +396,9 @@ header {
 .hero-image {
   display: block;
   width: 100%;
+  /* The width/height attributes (CLS) must not pin height when CSS
+     scales the width down on small screens — that squashes the logo. */
+  height: auto;
   max-width: 300px;
   margin: 0 auto;
   filter: drop-shadow(0 0 60px rgba(88, 101, 242, 0.35));
