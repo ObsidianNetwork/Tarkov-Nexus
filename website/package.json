@@ -8,7 +8,13 @@
     "preview": "astro preview"
   },
   "dependencies": {
-    "@astrojs/sitemap": "^3.7.2",
-    "astro": "^5.1.0"
+    "@astrojs/sitemap": "^3.7.4",
+    "@fontsource/inter": "^5.3.0",
+    "@fontsource/jetbrains-mono": "^5.3.0",
+    "@fontsource/space-grotesk": "^5.3.0",
+    "astro": "^7.2.10"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true
   }
 }
