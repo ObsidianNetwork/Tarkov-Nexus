@@ -11,10 +11,13 @@
 *.out
 /bin
 
+# Node / build artefacts (any depth: root installs, website, ui-wails frontend)
+node_modules/
+dist/
+.astro/
+
 # Wails build artefacts
 ui-wails/build/bin/
-ui-wails/frontend/node_modules/
-ui-wails/frontend/dist/
 
 # Generated Wails bindings are committed; local runtime copies are not
 ui-wails/frontend/package.json.md5
@@ -29,6 +32,9 @@ party-server/party.db
 .env
 .env.local
 .env.*.local
+
+# Agent tooling
+.omo/
 
 # Editor / OS
 .vscode/
