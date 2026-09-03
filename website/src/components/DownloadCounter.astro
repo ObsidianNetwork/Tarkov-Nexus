@@ -3,9 +3,11 @@ import { RELEASES_API } from '../lib/github';
 
 interface Props {
   variant?: 'hero' | 'inline';
+  /** 'beta' counts only prerelease/beta-tagged releases; default is all releases. */
+  channel?: 'stable' | 'beta';
 }
 
-const { variant = 'inline' } = Astro.props;
+const { variant = 'inline', channel } = Astro.props;
 // No build-time number: the count is always fetched live in the browser, so a
 // page served from cache can never show a stale total.
 ---
@@ -20,12 +22,12 @@ const { variant = 'inline' } = Astro.props;
     <span class="counter-label">downloads worldwide</span>
   </div>
 ) : (
-  <p class="counter-inline is-loading" data-counter data-downloads-api={RELEASES_API}>
+  <p class="counter-inline is-loading" data-counter data-channel={channel} data-downloads-api={RELEASES_API}>
     <span data-downloads aria-live="polite" aria-busy="true">
       <span class="counter-skeleton" aria-hidden="true"></span>
       <span class="visually-hidden">Loading download count</span>
     </span>
-    <span class="counter-suffix">downloads worldwide</span>
+    <span class="counter-suffix">{channel === 'beta' ? 'beta downloads' : 'downloads worldwide'}</span>
   </p>
 )}
 
@@ -178,28 +180,33 @@ const { variant = 'inline' } = Astro.props;
       .then((releases) => {
         if (!Array.isArray(releases)) throw new Error('unexpected payload');
 
-        const total = releases.reduce(
-          (sum: number, release: any) =>
-            sum +
-            (release.assets ?? []).reduce(
-              (assetSum: number, asset: any) =>
-                /\.(zip|exe|msi)$/i.test(asset.name)
-                  ? assetSum + (asset.download_count ?? 0)
-                  : assetSum,
-              0
-            ),
-          0
-        );
+        const assetSum = (release: any) =>
+          (release.assets ?? []).reduce(
+            (assetSum: number, asset: any) =>
+              /\.(zip|exe|msi)$/i.test(asset.name)
+                ? assetSum + (asset.download_count ?? 0)
+                : assetSum,
+            0
+          );
+
+        const total = releases.reduce((sum: number, release: any) => sum + assetSum(release), 0);
+        const betaTotal = releases
+          .filter(
+            (release: any) =>
+              release.prerelease || /beta|alpha|rc/i.test(release.tag_name ?? '')
+          )
+          .reduce((sum: number, release: any) => sum + assetSum(release), 0);
         if (total <= 0) throw new Error('no downloads reported');
 
-        const targets: HTMLElement[] = [];
+        const targets: { el: HTMLElement; value: number }[] = [];
         counters.forEach((counter) => {
-          const value = counter.querySelector<HTMLElement>('[data-downloads]');
-          if (value) {
+          const value = counter.dataset.channel === 'beta' ? betaTotal : total;
+          const el = counter.querySelector<HTMLElement>('[data-downloads]');
+          if (el) {
             // Announce the final number once, not every animation frame.
-            value.textContent = total.toLocaleString('en-US');
-            value.setAttribute('aria-busy', 'false');
-            targets.push(value);
+            el.textContent = value.toLocaleString('en-US');
+            el.setAttribute('aria-busy', 'false');
+            targets.push({ el, value });
           }
           counter.classList.remove('is-loading');
         });
@@ -209,16 +216,15 @@ const { variant = 'inline' } = Astro.props;
 
         // Count up from a near-total start: the point is to draw the eye to a
         // live number, not to imply the app was downloaded 0 times a second ago.
-        const start = Math.floor(total * 0.9);
         const duration = 1100;
         const begin = performance.now();
 
         const tick = (now: number) => {
           const progress = Math.min((now - begin) / duration, 1);
           const eased = 1 - Math.pow(1 - progress, 3);
-          const current = Math.round(start + (total - start) * eased).toLocaleString('en-US');
-          targets.forEach((el) => {
-            el.textContent = current;
+          targets.forEach(({ el, value }) => {
+            const start = Math.floor(value * 0.9);
+            el.textContent = Math.round(start + (value - start) * eased).toLocaleString('en-US');
           });
           if (progress < 1) requestAnimationFrame(tick);
         };
