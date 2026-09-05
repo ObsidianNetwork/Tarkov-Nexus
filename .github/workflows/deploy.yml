@@ -27,7 +27,22 @@ defaults:
     working-directory: website
 
 jobs:
+  refresh-release:
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      # Release-event deployments can keep serving an older artifact for the same
+      # commit. Dispatch from main instead: actions/deploy-pages#383.
+      - name: Refresh website from main
+        working-directory: ${{ runner.temp }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run deploy.yml --repo "$GITHUB_REPOSITORY" --ref main
+
   build:
+    if: github.event_name != 'release'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
