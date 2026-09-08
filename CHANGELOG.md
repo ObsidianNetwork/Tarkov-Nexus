@@ -140,7 +140,7 @@ summaries rather than copied private commit messages.
 
 ### Historical note
 
-- Repository/update-target housekeeping occurred in this release range, but no durable version-specific end-user change could be verified, so none is inferred here.
+- No durable version-specific end-user change was documented for this release.
 
 ## [v3.0.1] - 2025-11-21
 
