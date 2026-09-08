@@ -641,3 +641,69 @@ func TestGetAllPendingFriendRequests(t *testing.T) {
 		t.Errorf("unexpected pending request: %+v", r)
 	}
 }
+
+func TestSanitizeDisplayName(t *testing.T) {
+	cases := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{"short name kept", "Alice", "Alice"},
+		{"exactly 16 runes kept", "abcdefghijklmnop", "abcdefghijklmnop"},
+		{"long name truncated to 16", "abcdefghijklmnopqrstuvwxyz", "abcdefghijklmnop"},
+		{"multibyte runes counted individually", strings.Repeat("é", 20), strings.Repeat("é", 16)},
+		{"surrounding whitespace trimmed", "  Bob  ", "Bob"},
+		{"whitespace-only falls back", "   ", "Player"},
+		{"empty falls back", "", "Player"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := sanitizeDisplayName(tc.input); got != tc.want {
+				t.Errorf("sanitizeDisplayName(%q) = %q, want %q", tc.input, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestHandleRegisterRejectsDuplicateName(t *testing.T) {
+	h := newTestHub(t)
+
+	first := h.handleRegister(nil, &models.RegisterMessage{
+		Type:        models.MsgTypeRegister,
+		ClientID:    "client-0001",
+		DisplayName: "SwiftBadger42",
+	})
+	if first == nil {
+		t.Fatal("first registration with unique name should succeed")
+	}
+
+	// Same name, different client — must be rejected (case-insensitive)
+	dup := h.handleRegister(nil, &models.RegisterMessage{
+		Type:        models.MsgTypeRegister,
+		ClientID:    "client-0002",
+		DisplayName: "swiftbadger42",
+	})
+	if dup != nil {
+		t.Errorf("registration with duplicate name should be rejected, got client %+v", dup)
+	}
+
+	// Re-registering the same client ID with its own name must still work
+	reconnect := h.handleRegister(nil, &models.RegisterMessage{
+		Type:        models.MsgTypeRegister,
+		ClientID:    "client-0001",
+		DisplayName: "SwiftBadger42",
+	})
+	if reconnect == nil {
+		t.Error("re-registration by the same client ID should not be rejected")
+	}
+
+	// A different client with a different name registers fine
+	other := h.handleRegister(nil, &models.RegisterMessage{
+		Type:        models.MsgTypeRegister,
+		ClientID:    "client-0003",
+		DisplayName: "QuietOtter77",
+	})
+	if other == nil {
+		t.Error("registration with a distinct name should succeed")
+	}
+}

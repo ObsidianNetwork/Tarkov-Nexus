@@ -121,7 +121,7 @@ export function Setup() {
                         ? 'bg-neon-green border-neon-green text-bg-dark shadow-glow-green'
                         : currentStep === step.id
                         ? 'bg-primary-purple border-primary-purple text-white shadow-glow-md'
-                        : 'glass-card border-border-color text-text-muted'
+                        : 'glass-card glass-card-static border-border-color text-text-muted'
                     )}
                   >
                     {currentStep > step.id ? <CheckCircleIcon className="w-6 h-6" /> : step.id}

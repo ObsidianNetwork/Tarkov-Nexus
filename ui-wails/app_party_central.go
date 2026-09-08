@@ -19,26 +19,26 @@ func generateUUID() string {
 
 // CentralPartyState holds state for the centralized party system
 type CentralPartyState struct {
-	client                  *party.CentralClient
-	connected               bool
-	registered              bool
-	inParty                 bool
-	partyCode               string
-	isHost                  bool
-	members                 []map[string]interface{}
-	friends                 []map[string]interface{}
-	pendingInvites          []map[string]interface{}
-	incomingFriendRequests  []map[string]interface{}
-	outgoingFriendRequests  []map[string]interface{}
+	client                 *party.CentralClient
+	connected              bool
+	registered             bool
+	inParty                bool
+	partyCode              string
+	isHost                 bool
+	members                []map[string]interface{}
+	friends                []map[string]interface{}
+	pendingInvites         []map[string]interface{}
+	incomingFriendRequests []map[string]interface{}
+	outgoingFriendRequests []map[string]interface{}
 }
 
 // centralPartyState is the global state for centralized party
 var centralPartyState = &CentralPartyState{
-	members:                 make([]map[string]interface{}, 0),
-	friends:                 make([]map[string]interface{}, 0),
-	pendingInvites:          make([]map[string]interface{}, 0),
-	incomingFriendRequests:  make([]map[string]interface{}, 0),
-	outgoingFriendRequests:  make([]map[string]interface{}, 0),
+	members:                make([]map[string]interface{}, 0),
+	friends:                make([]map[string]interface{}, 0),
+	pendingInvites:         make([]map[string]interface{}, 0),
+	incomingFriendRequests: make([]map[string]interface{}, 0),
+	outgoingFriendRequests: make([]map[string]interface{}, 0),
 }
 
 // ===== CENTRALIZED PARTY METHODS =====
@@ -73,6 +73,10 @@ func (a *App) ConnectToPartyServer(displayNameOverride string) error {
 	}
 	if displayName == "" {
 		displayName = "Player"
+	}
+	// Clamp to the 16-character limit enforced server-side (rune-safe for multibyte)
+	if runes := []rune(displayName); len(runes) > 16 {
+		displayName = string(runes[:16])
 	}
 	// Save display name + client ID back to config
 	a.config.PartySettings.DisplayName = displayName

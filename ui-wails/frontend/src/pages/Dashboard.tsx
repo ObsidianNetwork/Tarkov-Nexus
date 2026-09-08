@@ -27,6 +27,9 @@ import {
   GetConfig,
 } from '../../wailsjs/go/main/App';
 import { EventsOn } from '../../wailsjs/runtime/runtime';
+import { NoticeBanner } from '../components/NoticeBanner';
+import { DismissNotice, GetActiveNotices } from '../../wailsjs/go/main/App';
+import type { notice } from '../../wailsjs/go/models';
 import { cn, formatTimestamp, formatDuration } from '../utils';
 import type { MapInfo, TarkovTrackerProgress, QuestStats, PlayerInfo, PartyStatus } from '../types';
 import { Button, Card, CardHeader, CardContent, Badge, StatusIndicator } from '../components/ui';
@@ -38,6 +41,7 @@ export function Dashboard() {
   const [availableMaps, setAvailableMaps] = useState<MapInfo[]>([]);
   const [showMapSelector, setShowMapSelector] = useState(false);
   const [selectedMap, setSelectedMap] = useState('');
+  const [notices, setNotices] = useState<notice.Notice[]>([]);
   const [mapError, setMapError] = useState<string | null>(null);
   const [trackerProgress, setTrackerProgress] = useState<TarkovTrackerProgress | null>(null);
   const [isLoadingTracker, setIsLoadingTracker] = useState(false);
@@ -137,6 +141,21 @@ export function Dashboard() {
     return () => { unsub(); };
   }, []);
 
+  // Load status notices published via notices/status.json (no release needed)
+  useEffect(() => {
+    GetActiveNotices()
+      .then((active) => setNotices(active ?? []))
+      .catch(() => setNotices([]));
+    const unsub = EventsOn('notice:updated', (active: notice.Notice[]) => {
+      setNotices(active ?? []);
+    });
+    return () => { unsub(); };
+  }, []);
+
+  const handleDismissNotice = (id: string) => {
+    DismissNotice(id).catch((err) => console.error('Failed to dismiss notice:', err));
+  };
+
   // Calculate derived data
   const questStats = calculateQuestStats(trackerProgress);
   const playerInfo = getPlayerInfo(trackerProgress);
@@ -232,7 +251,7 @@ export function Dashboard() {
           <p className="text-text-secondary text-sm">Monitor your Tarkov Map Sync integration</p>
         </div>
         <div className="flex items-center gap-3">
-          <div className="glass-card inline-flex items-center px-4 py-2.5">
+          <div className="glass-card glass-card-static inline-flex items-center px-4 py-2.5">
             <StatusIndicator
               status={isConnected ? 'success' : isRunning ? 'warning' : 'offline'}
               label={isConnected ? 'Connected' : isRunning ? 'Connecting...' : 'Stopped'}
@@ -242,7 +261,7 @@ export function Dashboard() {
             />
           </div>
           {remoteId && (
-            <div className="glass-card inline-flex items-center gap-2 px-4 py-2.5">
+            <div className="glass-card glass-card-static inline-flex items-center gap-2 px-4 py-2.5">
               <span className="text-xs text-text-muted uppercase tracking-wider">ID</span>
               <span className="text-sm font-bold text-neon-green tracking-widest font-mono">{remoteId}</span>
             </div>
@@ -344,6 +363,11 @@ export function Dashboard() {
         />
       </div>
 
+      {/* Maintainer status notices */}
+      <div className="mb-8">
+        <NoticeBanner notices={notices} onDismiss={handleDismissNotice} />
+      </div>
+
       {/* Party Status Card */}
       {partyStatus?.enabled && partyStatus?.active && (
         <Card className="mb-8 border-primary-purple/30 bg-primary-purple/5 animate-fade-in-up" style={{ animationDelay: '0.15s' }}>
@@ -385,7 +409,7 @@ export function Dashboard() {
 
       {/* Manual Map Selector */}
       {isRunning && !status?.currentNormalizedMap && (
-        <Card className="mb-8 border-warning/30 bg-warning/5 hover-glow animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
+        <Card className="mb-8 border-warning/30 bg-warning/5 animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
           <div className="flex items-start">
             <MapIcon className="w-6 h-6 text-warning mr-3 flex-shrink-0 mt-1" />
             <div className="flex-1">
@@ -605,7 +629,7 @@ export function Dashboard() {
 
 function StatCard({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: string }) {
   return (
-    <Card hoverable glowOnHover className="hover-lift">
+    <Card>
       <div className="flex items-center mb-3">
         <Icon className="w-5 h-5 text-primary-purple mr-2" />
         <span className="text-sm text-text-muted uppercase tracking-wide">{label}</span>
@@ -623,7 +647,7 @@ function InfoPanel({
   items: Array<{ label: string; value: string; status?: 'success' | 'error' }>;
 }) {
   return (
-    <Card hoverable className="hover-lift">
+    <Card>
       <CardHeader>
         <h3 className="text-lg font-semibold text-text-primary">{title}</h3>
       </CardHeader>

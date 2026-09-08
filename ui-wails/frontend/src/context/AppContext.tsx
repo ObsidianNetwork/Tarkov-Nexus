@@ -164,6 +164,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         isUpdateReady={isUpdateReady}
         downloadProgress={updateStatus?.downloadProgress || 0}
         error={updateStatus?.error || ''}
+        currentVersion={updateStatus?.currentVersion}
       />
     </AppContext.Provider>
   );

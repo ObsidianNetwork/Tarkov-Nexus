@@ -29,6 +29,7 @@ type Config struct {
 	ReconnectOptions         ReconnectOptions `json:"reconnectOptions"`
 	UpdateSettings           UpdateSettings   `json:"updateSettings"`
 	PartySettings            PartySettings    `json:"partySettings"`
+	DismissedNotices         []string         `json:"dismissedNotices"`
 	SetupComplete            bool             `json:"setupComplete"`
 }
 
@@ -89,7 +90,7 @@ func DefaultConfig() *Config {
 		PartySettings: PartySettings{
 			Enabled:     false,
 			ServerURL:   "wss://party.tarkov.nexus/ws",
-			DisplayName: "Player",
+			DisplayName: "",
 		},
 	}
 }

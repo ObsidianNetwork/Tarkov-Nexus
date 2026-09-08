@@ -10,6 +10,7 @@ import (
 	"math/big"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -19,6 +20,7 @@ import (
 	"tarkov-screenshot-analyzer/internal/config"
 	"tarkov-screenshot-analyzer/internal/game"
 	"tarkov-screenshot-analyzer/internal/integration"
+	"tarkov-screenshot-analyzer/internal/notice"
 	"tarkov-screenshot-analyzer/internal/overlay"
 	"tarkov-screenshot-analyzer/internal/party"
 	"tarkov-screenshot-analyzer/internal/position"
@@ -36,6 +38,7 @@ type App struct {
 	logger           *Logger
 	updater          *updater.Updater
 	updateChecker    *updater.BackgroundChecker
+	noticeFetcher    *notice.Fetcher
 	partyServer      *party.Server
 	overlayServer    *overlay.Server
 	isHostingParty   bool
@@ -44,6 +47,8 @@ type App struct {
 	stateMutex       sync.RWMutex
 	isRunning        bool
 	dataDir          string // AppData directory for config/logs
+	mapWindowCmd     *exec.Cmd // Tracks the spawned map window process to prevent duplicates
+	mapWindowMu      sync.Mutex
 }
 
 // Logger maintains an in-memory log buffer
@@ -235,6 +240,9 @@ func (a *App) startup(ctx context.Context) {
 // shutdown is called when the app is closing
 func (a *App) shutdown(ctx context.Context) {
 	a.logInfo("Application shutting down")
+	if a.noticeFetcher != nil {
+		a.noticeFetcher.Stop()
+	}
 	if a.isRunning {
 		a.StopIntegration()
 	}
@@ -247,6 +255,13 @@ func (a *App) shutdown(ctx context.Context) {
 	if a.overlayServer != nil {
 		a.overlayServer.Stop()
 	}
+	// Kill any spawned map window process
+	a.mapWindowMu.Lock()
+	if a.mapWindowCmd != nil && a.mapWindowCmd.Process != nil {
+		a.mapWindowCmd.Process.Kill()
+		a.mapWindowCmd = nil
+	}
+	a.mapWindowMu.Unlock()
 }
 
 // domReady is called after the front-end dom has been loaded
@@ -1404,6 +1419,70 @@ func (a *App) DownloadUpdate(version string) error {
 	return a.updater.DownloadAndInstall(version)
 }
 
+// initializeNotices starts the status-notice fetcher. Notices reach users
+// without a release: edit notices/status.json on the repo's main branch and
+// running apps pick the change up within the fetch interval.
+func (a *App) initializeNotices() {
+	fetcher := notice.NewFetcher(notice.NoticeURL, notice.DefaultInterval, a)
+	fetcher.OnUpdate(func(active []notice.Notice) {
+		a.emitEvent("notice:updated", a.filterDismissed(active))
+	})
+	a.noticeFetcher = fetcher
+	fetcher.Start()
+	a.logDebug("Notice fetcher started")
+}
+
+// filterDismissed removes notices the user has dismissed.
+func (a *App) filterDismissed(notices []notice.Notice) []notice.Notice {
+	if a.config == nil || len(a.config.DismissedNotices) == 0 {
+		return notices
+	}
+	dismissed := make(map[string]bool, len(a.config.DismissedNotices))
+	for _, id := range a.config.DismissedNotices {
+		dismissed[id] = true
+	}
+	kept := make([]notice.Notice, 0, len(notices))
+	for _, n := range notices {
+		if !dismissed[n.ID] {
+			kept = append(kept, n)
+		}
+	}
+	return kept
+}
+
+// GetActiveNotices returns the currently visible status notices
+func (a *App) GetActiveNotices() []notice.Notice {
+	if a.noticeFetcher == nil {
+		return []notice.Notice{}
+	}
+	return a.filterDismissed(a.noticeFetcher.Last())
+}
+
+// DismissNotice hides a notice for this user permanently (by ID, persisted)
+func (a *App) DismissNotice(id string) error {
+	if a.config == nil {
+		return fmt.Errorf("config not loaded")
+	}
+	if id == "" {
+		return fmt.Errorf("notice id is required")
+	}
+	for _, existing := range a.config.DismissedNotices {
+		if existing == id {
+			return nil // already dismissed
+		}
+	}
+	a.config.DismissedNotices = append(a.config.DismissedNotices, id)
+	if err := a.SaveConfig(a.config); err != nil {
+		return fmt.Errorf("failed to persist dismissed notice: %w", err)
+	}
+	// Re-emit so the UI hides it immediately
+	if a.noticeFetcher != nil {
+		a.emitEvent("notice:updated", a.GetActiveNotices())
+	}
+	a.logInfo(fmt.Sprintf("Notice dismissed: %s", id))
+	return nil
+}
+
 // GetUpdateStatus returns the current update status
 func (a *App) GetUpdateStatus() map[string]interface{} {
 	if a.updater == nil {
@@ -1431,22 +1510,44 @@ func (a *App) GetUpdateStatus() map[string]interface{} {
 	}
 }
 
-// SetUpdateChannel sets the update channel (stable or beta)
+// SetUpdateChannel sets the update channel (stable or beta), persists the
+// choice to config immediately, and rechecks the new channel right away so
+// the user immediately sees what that channel offers.
 func (a *App) SetUpdateChannel(channel string) error {
 	if a.updater == nil {
 		return fmt.Errorf("updater not initialized")
+	}
+	if a.config == nil {
+		return fmt.Errorf("config not loaded")
 	}
 
 	var ch updater.UpdateChannel
 	if channel == "beta" {
 		ch = updater.ChannelBeta
 	} else {
+		channel = "stable"
 		ch = updater.ChannelStable
 	}
 
 	a.updater.SetChannel(ch)
+	a.config.UpdateSettings.UpdateChannel = channel
+	if err := a.SaveConfig(a.config); err != nil {
+		return fmt.Errorf("failed to persist update channel: %w", err)
+	}
+
 	a.logInfo(fmt.Sprintf("Update channel set to: %s", channel))
+	if a.updateChecker != nil {
+		a.updateChecker.CheckNow()
+	}
 	return nil
+}
+
+// ListBetaVersions returns published beta versions for the Settings picker
+func (a *App) ListBetaVersions() ([]updater.VersionOption, error) {
+	if a.updater == nil {
+		return nil, fmt.Errorf("updater not initialized")
+	}
+	return a.updater.ListBetaVersions(context.Background())
 }
 
 // SetAutoUpdateCheck enables or disables automatic update checking
@@ -1468,6 +1569,15 @@ func (a *App) OpenReleaseURL() error {
 	url := fmt.Sprintf("https://github.com/%s/%s/releases", updater.GitHubOwner, updater.GitHubRepo)
 	wailsRuntime.BrowserOpenURL(a.ctx, url)
 	a.logInfo("Opened GitHub releases page")
+	return nil
+}
+
+// OpenURL opens an arbitrary URL in the default browser (used by notice links)
+func (a *App) OpenURL(url string) error {
+	if url == "" {
+		return fmt.Errorf("url is required")
+	}
+	wailsRuntime.BrowserOpenURL(a.ctx, url)
 	return nil
 }
 

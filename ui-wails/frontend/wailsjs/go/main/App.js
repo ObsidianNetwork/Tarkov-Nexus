@@ -58,6 +58,10 @@ export function DisconnectFromPartyServer() {
   return window['go']['main']['App']['DisconnectFromPartyServer']();
 }
 
+export function DismissNotice(arg1) {
+  return window['go']['main']['App']['DismissNotice'](arg1);
+}
+
 export function DownloadUpdate(arg1) {
   return window['go']['main']['App']['DownloadUpdate'](arg1);
 }
@@ -68,6 +72,10 @@ export function Error(arg1) {
 
 export function ExportLogs() {
   return window['go']['main']['App']['ExportLogs']();
+}
+
+export function GetActiveNotices() {
+  return window['go']['main']['App']['GetActiveNotices']();
 }
 
 export function GetAvailableMaps() {
@@ -194,6 +202,10 @@ export function LeaveParty() {
   return window['go']['main']['App']['LeaveParty']();
 }
 
+export function ListBetaVersions() {
+  return window['go']['main']['App']['ListBetaVersions']();
+}
+
 export function OpenMapWindow() {
   return window['go']['main']['App']['OpenMapWindow']();
 }
@@ -204,6 +216,10 @@ export function OpenReleaseURL() {
 
 export function OpenTarkovDevBrowser() {
   return window['go']['main']['App']['OpenTarkovDevBrowser']();
+}
+
+export function OpenURL(arg1) {
+  return window['go']['main']['App']['OpenURL'](arg1);
 }
 
 export function RemoveFriend(arg1) {

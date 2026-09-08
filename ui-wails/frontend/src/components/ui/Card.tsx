@@ -3,18 +3,19 @@ import { cn } from '../../utils';
 
 export interface CardProps extends HTMLAttributes<HTMLDivElement> {
   variant?: 'default' | 'featured';
+  /** Opt-in hover affordance for clickable/interactive cards. Static display cards stay flat. */
   hoverable?: boolean;
   glowOnHover?: boolean;
 }
 
 export const Card = forwardRef<HTMLDivElement, CardProps>(
-  ({ className, variant = 'default', hoverable = true, glowOnHover = false, children, ...props }, ref) => {
+  ({ className, variant = 'default', hoverable = false, glowOnHover = false, children, ...props }, ref) => {
     const baseStyles = 'glass-card p-6 relative';
     const variantStyles = {
       default: '',
       featured: 'gradient-border',
     };
-    const hoverStyles = hoverable ? 'hover-lift' : '';
+    const hoverStyles = hoverable ? 'hover-lift' : 'glass-card-static';
     const glowStyles = glowOnHover ? 'hover-glow' : '';
 
     return (

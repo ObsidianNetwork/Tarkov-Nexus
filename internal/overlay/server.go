@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -57,11 +59,19 @@ type Server struct {
 
 	// Callback fired when the map page reports its session ID back.
 	onRemoteIDCaptured func(remoteID string)
+
+	// cookiesAccepted is set after the user dismisses tarkov.dev's banner.
+	// Persisted to consentFile so a later overlay process still attaches the
+	// cookie on HTML responses. The map iframe is third-party to
+	// wails.localhost, so a SameSite=Lax cookie from a fetch is dropped.
+	consentFile     string
+	cookiesAccepted bool
+	consentMu       sync.Mutex
 }
 
 // NewServer creates a new overlay server.
 func NewServer(port int, log logger.Logger) *Server {
-	return &Server{
+	s := &Server{
 		port:   port,
 		logger: log,
 		upgrader: websocket.Upgrader{
@@ -69,6 +79,42 @@ func NewServer(port int, log logger.Logger) *Server {
 		},
 		clients:        make(map[*websocket.Conn]bool),
 		partyPositions: make(map[string]*PartyPosition),
+		consentFile:    defaultConsentFile(),
+	}
+	s.cookiesAccepted = fileExists(s.consentFile)
+	return s
+}
+
+func defaultConsentFile() string {
+	dir, err := os.UserConfigDir()
+	if err != nil {
+		return ""
+	}
+	return filepath.Join(dir, "TarkovNexus", "cookie-consent-accepted")
+}
+
+func fileExists(path string) bool {
+	if path == "" {
+		return false
+	}
+	_, err := os.Stat(path)
+	return err == nil
+}
+
+// cookieConsentCookie is a CHIPS cookie: the map page is framed by
+// wails.localhost, so an unpartitioned SameSite=Lax cookie is treated as
+// third-party and WebView2 drops it. Partitioned + SameSite=None + Secure
+// is the cookie the iframe is allowed to keep. localhost is a secure
+// context, so Secure is valid over http://127.0.0.1.
+func cookieConsentCookie() *http.Cookie {
+	return &http.Cookie{
+		Name:        "CookieConsent",
+		Value:       "true",
+		Path:        "/",
+		MaxAge:      365 * 24 * 60 * 60,
+		SameSite:    http.SameSiteNoneMode,
+		Secure:      true,
+		Partitioned: true,
 	}
 }
 
@@ -78,8 +124,9 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/ws", s.handleWebSocket)               // WS for map viewer
 	mux.HandleFunc("/nexus/map", s.handleMapPage)          // built-in Leaflet map viewer
 	mux.HandleFunc("/nexus/state", s.handleState)          // JSON state endpoint
-	mux.HandleFunc("/nexus/capture-id", s.handleCaptureID) // receives session ID from injected script
-	mux.HandleFunc("/", s.handleRoot)                      // catch-all: WS upgrade or proxy to tarkov.dev
+	mux.HandleFunc("/nexus/capture-id", s.handleCaptureID)      // receives session ID from injected script
+	mux.HandleFunc("/nexus/accept-cookies", s.handleAcceptCookies) // promotes client-side consent cookie to a persistent first-party cookie
+	mux.HandleFunc("/", s.handleRoot)                              // catch-all: WS upgrade or proxy to tarkov.dev
 
 	s.server = &http.Server{
 		Addr:    fmt.Sprintf("127.0.0.1:%d", s.port),
@@ -295,6 +342,73 @@ func (s *Server) handleCaptureID(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+}
+
+// handleAcceptCookies sets a first-party CookieConsent cookie so that
+// tarkov.dev's react-cookie-consent library sees it on subsequent loads.
+// WebView2 drops cookies set by JavaScript inside a cross-origin iframe
+// (third-party cookie blocking), but honours Set-Cookie headers from the
+// proxy origin because they are first-party.
+func (s *Server) handleAcceptCookies(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if r.Header.Get("X-Nexus-Accept-Cookies") != "1" {
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
+	}
+	if !localOverlayOrigin(r.Header.Get("Origin")) {
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
+	}
+	s.rememberCookieConsent()
+	http.SetCookie(w, cookieConsentCookie())
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	io.WriteString(w, `{"status":"ok"}`)
+}
+
+// localOverlayOrigin accepts same-origin overlay requests. An empty Origin is
+// allowed so tests and non-browser clients can call the endpoint; a browser
+// cross-site POST always sends Origin and is rejected unless it is loopback.
+func localOverlayOrigin(origin string) bool {
+	if strings.TrimSpace(origin) == "" {
+		return true
+	}
+	u, err := url.Parse(origin)
+	if err != nil || u.Host == "" {
+		return false
+	}
+	switch strings.ToLower(u.Hostname()) {
+	case "localhost", "127.0.0.1", "::1":
+		return true
+	default:
+		return false
+	}
+}
+
+func (s *Server) rememberCookieConsent() {
+	s.consentMu.Lock()
+	s.cookiesAccepted = true
+	path := s.consentFile
+	s.consentMu.Unlock()
+	if path == "" {
+		return
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		s.logger.Warning(fmt.Sprintf("Failed to persist cookie consent: %v", err))
+		return
+	}
+	if err := os.WriteFile(path, []byte("1"), 0644); err != nil {
+		s.logger.Warning(fmt.Sprintf("Failed to persist cookie consent: %v", err))
+	}
+}
+
+func (s *Server) hasCookieConsent() bool {
+	s.consentMu.Lock()
+	defer s.consentMu.Unlock()
+	return s.cookiesAccepted
 }
 
 func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
@@ -542,6 +656,15 @@ func (s *Server) handleProxy(w http.ResponseWriter, r *http.Request) {
 		ct := resp.Header.Get("Content-Type")
 		if !strings.Contains(ct, "text/html") {
 			return nil
+		}
+
+		// After the player has accepted once, attach the consent cookie to
+		// every HTML response so the next iframe load sees it even if the
+		// earlier fetch Set-Cookie was dropped as third-party.
+		if s.hasCookieConsent() {
+			if v := cookieConsentCookie().String(); v != "" {
+				resp.Header.Add("Set-Cookie", v)
+			}
 		}
 
 		// Decompress if tarkov.dev still sent gzip despite our Accept-Encoding

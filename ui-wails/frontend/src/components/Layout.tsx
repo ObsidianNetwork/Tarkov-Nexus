@@ -13,6 +13,7 @@ import { TitleBar } from './TitleBar';
 import { PartyNotifications } from './PartyNotifications';
 import ObiLogo from '../assets/images/Obi_logo-trans.png';
 import { GetVersion } from '../../wailsjs/go/main/App';
+import { Badge } from './ui';
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: HomeIcon },
@@ -24,6 +25,7 @@ const navigation = [
 export function Layout() {
   const { status } = useApp();
   const [version, setVersion] = useState('');
+  const channel = /-beta(?:\.|$)/.test(version.split('+')[0]) ? 'beta' : 'stable';
 
   useEffect(() => {
     GetVersion().then(v => setVersion(v)).catch(() => setVersion(''));
@@ -108,7 +110,7 @@ export function Layout() {
 
           {/* Status indicator */}
           <div className="px-4 py-4 border-t border-border-color/30">
-            <div className="glass-card p-3">
+            <div className="glass-card glass-card-static p-3">
               <StatusIndicator
                 status={status?.connected ? 'success' : 'offline'}
                 label={status?.connected ? 'Connected' : 'Disconnected'}
@@ -123,7 +125,12 @@ export function Layout() {
           <div className="px-6 py-3 text-xs text-text-muted border-t border-border-color/20">
             <div className="flex items-center justify-between">
               <span>Version</span>
-              <span className="font-mono text-text-secondary">v{version || '...'}</span>
+              <span className="flex items-center gap-1.5">
+                <span className="font-mono text-text-secondary">{version === '0.0.0-dev' ? 'DEV' : `v${version || '...'}`}</span>
+                <Badge variant={channel === 'beta' ? 'warning' : 'success'} className="!text-[8px] !leading-none !px-1.5 !py-1 !rounded-md !font-semibold tracking-wide">
+                  {channel === 'beta' ? 'BETA' : 'STABLE'}
+                </Badge>
+              </span>
             </div>
           </div>
         </div>

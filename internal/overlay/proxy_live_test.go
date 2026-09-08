@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -71,6 +72,7 @@ func TestLiveProxy(t *testing.T) {
 	}
 
 	s := NewServer(livePort, testLogger{t})
+	s.consentFile = filepath.Join(t.TempDir(), "accepted")
 	if err := s.Start(); err != nil {
 		t.Fatalf("Start: %v", err)
 	}
@@ -149,15 +151,7 @@ func TestLiveProxy(t *testing.T) {
 	// tarkov.dev's own bundles too — "savedMapSettings" is *their* settings key,
 	// so if their frontend ships that literal the test would fail while the
 	// proxy is behaving perfectly.
-	forbidden := []struct{ needle, why string }{
-		{"CookieConsent=true", "answers tarkov.dev's cookie consent on the user's behalf"},
-		{".CookieConsent { display: none", "suppresses the consent banner so the user cannot answer it"},
-		{".id-wrapper { display: none", "hides tarkov.dev's own branding and session widget"},
-		{"window.L.Map = function", "replaces Leaflet's Map constructor; use L.Map.addInitHook"},
-		{"savedMapSettings", "overrides the user's own map settings on tarkov.dev"},
-		{"cb.click()", "programmatically unchecks tarkov.dev's map filters"},
-	}
-	for _, f := range forbidden {
+	for _, f := range injectScriptForbidden {
 		if strings.Contains(proxyInjectScript, f.needle) {
 			t.Errorf("the injected script contains %q, which %s", f.needle, f.why)
 		}
@@ -173,5 +167,29 @@ func TestLiveProxy(t *testing.T) {
 			t.Errorf("injected script is missing %q: map capture needs both the init "+
 				"hook and the late-capture fallback for maps built before it ran", needle)
 		}
+	}
+	if !strings.Contains(html, "fillMapAfterConsent") {
+		t.Error("injected script is missing fillMapAfterConsent: cookie-strip fill is not wired")
+	}
+
+	// ── /nexus/accept-cookies endpoint ─────────────────────────────────────
+	cookieReq, _ := http.NewRequest(http.MethodPost, fmt.Sprintf("http://127.0.0.1:%d/nexus/accept-cookies", livePort), nil)
+	cookieReq.Header.Set("X-Nexus-Accept-Cookies", "1")
+	cookieResp, err := (&http.Client{Timeout: 5 * time.Second}).Do(cookieReq)
+	if err != nil {
+		t.Fatalf("/nexus/accept-cookies request failed: %v", err)
+	}
+	cookieResp.Body.Close()
+	if cookieResp.StatusCode != http.StatusOK {
+		t.Errorf("/nexus/accept-cookies status %d, want 200", cookieResp.StatusCode)
+	}
+	foundCookie := false
+	for _, c := range cookieResp.Cookies() {
+		if c.Name == "CookieConsent" && c.Value == "true" {
+			foundCookie = true
+		}
+	}
+	if !foundCookie {
+		t.Error("/nexus/accept-cookies did not return Set-Cookie: CookieConsent=true")
 	}
 }

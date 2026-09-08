@@ -2,6 +2,7 @@ package updater
 
 import (
 	"archive/zip"
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -9,18 +10,14 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"sort"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/inconshreveable/go-update"
-	"github.com/rhysd/go-github-selfupdate/selfupdate"
+	"golang.org/x/mod/semver"
 	"tarkov-screenshot-analyzer/internal/logger"
-)
-
-const (
-	// GitHub repository for releases
-	GitHubOwner = "ObsidianNetwork"
-	GitHubRepo  = "Tarkov-Nexus"
 )
 
 // Updater manages application updates
@@ -29,6 +26,7 @@ type Updater struct {
 	status        UpdateStatus
 	statusMutex   sync.RWMutex
 	channel       UpdateChannel
+	releaseClient *ReleaseClient
 	eventHandlers map[string][]func(interface{})
 	handlerMutex  sync.RWMutex
 }
@@ -38,6 +36,7 @@ func NewUpdater(log logger.Logger, channel UpdateChannel) *Updater {
 	return &Updater{
 		logger:        log,
 		channel:       channel,
+		releaseClient: NewReleaseClient(GitHubOwner, GitHubRepo),
 		eventHandlers: make(map[string][]func(interface{})),
 		status: UpdateStatus{
 			CurrentVersion: Version,
@@ -45,7 +44,7 @@ func NewUpdater(log logger.Logger, channel UpdateChannel) *Updater {
 	}
 }
 
-// CheckForUpdates checks if a new version is available
+// CheckForUpdates checks if a new version is available on the current channel
 func (u *Updater) CheckForUpdates() (*UpdateInfo, error) {
 	u.setStatus(func(s *UpdateStatus) {
 		s.Checking = true
@@ -56,61 +55,61 @@ func (u *Updater) CheckForUpdates() (*UpdateInfo, error) {
 		s.LastChecked = time.Now().Format(time.RFC3339)
 	})
 
-	u.logger.Info("Checking for updates...")
+	u.logger.Info(fmt.Sprintf("Checking for updates (channel: %s)...", u.channel))
 
-	// Get latest release
-	latest, found, err := selfupdate.DetectLatest(GitHubOwner + "/" + GitHubRepo)
+	latest, err := u.releaseClient.Latest(context.Background(), u.channel)
 	if err != nil {
+		if err == ErrNoReleaseFound {
+			u.logger.Info("No releases found for channel")
+			return nil, err
+		}
 		u.logger.Error(fmt.Sprintf("Failed to check for updates: %v", err))
 		u.setError(fmt.Sprintf("Update check failed: %v", err))
 		return nil, err
 	}
 
-	if !found {
-		u.logger.Info("No releases found")
-		return nil, fmt.Errorf("no releases found")
-	}
-
 	// Check if update is available
 	currentVersion := "v" + Version
-	isNewer, err := IsNewerVersion(Version, latest.Version.String())
+	isNewer, err := IsNewerVersion(Version, latest.TagName)
 	if err != nil {
 		u.logger.Error(fmt.Sprintf("Failed to compare versions: %v", err))
 		return nil, err
 	}
 
+	latestVersion := strings.TrimPrefix(latest.TagName, "v")
+
 	if !isNewer {
-		u.logger.Info(fmt.Sprintf("Already on latest version: %s", currentVersion))
+		u.logger.Info(fmt.Sprintf("Already on latest %s version: %s", u.channel, currentVersion))
 		u.setStatus(func(s *UpdateStatus) {
 			s.UpdateAvailable = false
-			s.LatestVersion = latest.Version.String()
+			s.LatestVersion = latestVersion
 		})
 		return nil, nil
 	}
 
-	u.logger.Info(fmt.Sprintf("Update available: %s -> %s", currentVersion, latest.Version))
+	u.logger.Info(fmt.Sprintf("Update available: %s -> %s", currentVersion, latest.TagName))
 
-	// Build UpdateInfo
-	publishedAt := time.Time{}
-	if latest.PublishedAt != nil {
-		publishedAt = *latest.PublishedAt
+	asset, err := pickUpdaterAsset(latest)
+	if err != nil {
+		u.logger.Error(err.Error())
+		return nil, err
 	}
 
 	info := &UpdateInfo{
-		Version:      latest.Version.String(),
-		ReleaseURL:   latest.URL,
-		ReleaseDate:  publishedAt,
+		Version:      latestVersion,
+		ReleaseURL:   latest.HTMLURL,
+		ReleaseDate:  latest.PublishedAt,
 		ReleaseName:  latest.Name,
-		ReleaseBody:  latest.ReleaseNotes,
-		AssetURL:     latest.AssetURL,
-		AssetName:    "",
-		AssetSize:    int64(latest.AssetByteSize),
-		IsPrerelease: false, // Library doesn't expose this
+		ReleaseBody:  latest.Body,
+		AssetURL:     asset.BrowserDownloadURL,
+		AssetName:    asset.Name,
+		AssetSize:    asset.Size,
+		IsPrerelease: latest.Prerelease,
 	}
 
 	u.setStatus(func(s *UpdateStatus) {
 		s.UpdateAvailable = true
-		s.LatestVersion = latest.Version.String()
+		s.LatestVersion = latestVersion
 	})
 
 	u.emit("update:available", info)
@@ -118,119 +117,89 @@ func (u *Updater) CheckForUpdates() (*UpdateInfo, error) {
 	return info, nil
 }
 
-// DownloadAndInstall downloads and installs the update
+// DownloadAndInstall downloads, verifies and installs the given version.
+// The version must match a published release tag ("v" prefix optional) —
+// this is what makes downgrades and explicit beta picks possible.
 func (u *Updater) DownloadAndInstall(version string) error {
+	ctx := context.Background()
+
 	u.setStatus(func(s *UpdateStatus) {
 		s.Downloading = true
 		s.Error = ""
+		s.DownloadProgress = 0
 	})
 
 	u.logger.Info(fmt.Sprintf("Downloading update: %s", version))
 	u.emit("update:downloading", map[string]interface{}{"version": version})
 
-	// Get latest release
-	latest, found, err := selfupdate.DetectLatest(GitHubOwner + "/" + GitHubRepo)
-	if err != nil {
-		u.logger.Error(fmt.Sprintf("Failed to detect latest version: %v", err))
-		u.setError(fmt.Sprintf("Version detection failed: %v", err))
+	fail := func(msg string, err error) error {
+		u.logger.Error(fmt.Sprintf("%s: %v", msg, err))
+		u.setError(fmt.Sprintf("%s: %v", msg, err))
 		u.setStatus(func(s *UpdateStatus) {
 			s.Downloading = false
+			s.Installing = false
+			s.DownloadProgress = 0
 		})
 		return err
 	}
 
-	if !found {
-		err := fmt.Errorf("release not found")
-		u.logger.Error(err.Error())
-		u.setError(err.Error())
-		u.setStatus(func(s *UpdateStatus) {
-			s.Downloading = false
-		})
-		return err
+	// Resolve the exact tag — never silently fall back to "latest"
+	rel, err := u.releaseClient.Get(ctx, version)
+	if err != nil {
+		return fail("Version resolution failed", err)
 	}
+
+	asset, err := pickUpdaterAsset(rel)
+	if err != nil {
+		return fail("Asset resolution failed", err)
+	}
+
+	// Download the zip with progress reporting
+	u.logger.Info(fmt.Sprintf("Downloading from: %s", asset.BrowserDownloadURL))
+	tmpZip, err := os.CreateTemp("", "update-*.zip")
+	if err != nil {
+		return fail("Failed to create temp file", err)
+	}
+	defer os.Remove(tmpZip.Name())
+
+	if err := u.downloadFile(ctx, asset.BrowserDownloadURL, tmpZip); err != nil {
+		tmpZip.Close()
+		return fail("Download failed", err)
+	}
+	tmpZip.Close()
+
+	// Verify integrity before anything touches the executable.
+	// Fail-closed: a missing checksum file aborts the install.
+	u.logger.Info("Verifying download checksum...")
+	if err := verifyChecksum(ctx, tmpZip.Name(), asset.BrowserDownloadURL+checksumSuffix); err != nil {
+		return fail("Checksum verification failed", err)
+	}
+	u.logger.Info("Checksum OK")
 
 	u.setStatus(func(s *UpdateStatus) {
 		s.Downloading = false
 		s.Installing = true
 	})
-
 	u.logger.Info("Installing update...")
 	u.emit("update:installing", map[string]interface{}{"version": version})
-
-	// Download the zip file
-	u.logger.Info(fmt.Sprintf("Downloading from: %s", latest.AssetURL))
-	resp, err := http.Get(latest.AssetURL)
-	if err != nil {
-		u.logger.Error(fmt.Sprintf("Failed to download update: %v", err))
-		u.setError(fmt.Sprintf("Download failed: %v", err))
-		u.setStatus(func(s *UpdateStatus) {
-			s.Installing = false
-		})
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		err := fmt.Errorf("download failed with status: %d", resp.StatusCode)
-		u.logger.Error(err.Error())
-		u.setError(err.Error())
-		u.setStatus(func(s *UpdateStatus) {
-			s.Installing = false
-		})
-		return err
-	}
-
-	// Save to temporary file
-	tmpZip, err := os.CreateTemp("", "update-*.zip")
-	if err != nil {
-		u.logger.Error(fmt.Sprintf("Failed to create temp file: %v", err))
-		u.setError(fmt.Sprintf("Failed to create temp file: %v", err))
-		u.setStatus(func(s *UpdateStatus) {
-			s.Installing = false
-		})
-		return err
-	}
-	defer os.Remove(tmpZip.Name())
-
-	_, err = io.Copy(tmpZip, resp.Body)
-	tmpZip.Close()
-	if err != nil {
-		u.logger.Error(fmt.Sprintf("Failed to save download: %v", err))
-		u.setError(fmt.Sprintf("Failed to save download: %v", err))
-		u.setStatus(func(s *UpdateStatus) {
-			s.Installing = false
-		})
-		return err
-	}
 
 	// Extract the first executable from the zip
 	u.logger.Info("Extracting executable from archive...")
 	binary, err := extractFirstExeFromZip(tmpZip.Name())
 	if err != nil {
-		u.logger.Error(fmt.Sprintf("Failed to extract executable: %v", err))
-		u.setError(fmt.Sprintf("Extraction failed: %v", err))
-		u.setStatus(func(s *UpdateStatus) {
-			s.Installing = false
-		})
-		return err
+		return fail("Extraction failed", err)
 	}
 	defer binary.Close()
 
 	// Apply the update - this works regardless of executable name
 	// go-update handles Windows file locking properly
 	u.logger.Info("Applying update to executable...")
-	err = update.Apply(binary, update.Options{})
-	if err != nil {
+	if err := update.Apply(binary, update.Options{}); err != nil {
 		// Attempt rollback if update fails
 		if rerr := update.RollbackError(err); rerr != nil {
 			u.logger.Error(fmt.Sprintf("Rollback failed: %v", rerr))
 		}
-		u.logger.Error(fmt.Sprintf("Failed to apply update: %v", err))
-		u.setError(fmt.Sprintf("Update failed: %v", err))
-		u.setStatus(func(s *UpdateStatus) {
-			s.Installing = false
-		})
-		return err
+		return fail("Update failed", err)
 	}
 
 	// Update successful - works with any executable name
@@ -238,6 +207,7 @@ func (u *Updater) DownloadAndInstall(version string) error {
 	u.setStatus(func(s *UpdateStatus) {
 		s.Installing = false
 		s.UpdateAvailable = false
+		s.DownloadProgress = 100
 	})
 
 	u.emit("update:ready", map[string]interface{}{
@@ -246,6 +216,50 @@ func (u *Updater) DownloadAndInstall(version string) error {
 		"restartMessage": "The application will now restart to complete the update.",
 	})
 
+	return nil
+}
+
+// progressWriter counts streamed bytes and reports percent-complete.
+type progressWriter struct {
+	total   int64
+	written int64
+	onTick  func(percent int)
+}
+
+func (p *progressWriter) Write(b []byte) (int, error) {
+	n := len(b)
+	p.written += int64(n)
+	if p.total > 0 && p.onTick != nil {
+		p.onTick(int(100 * p.written / p.total))
+	}
+	return n, nil
+}
+
+// downloadFile streams url into f, updating status.DownloadProgress.
+func (u *Updater) downloadFile(ctx context.Context, url string, f *os.File) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return fmt.Errorf("build request: %w", err)
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("download: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("download failed with status: %d", resp.StatusCode)
+	}
+
+	pw := &progressWriter{
+		total: resp.ContentLength,
+		onTick: func(pct int) {
+			u.setStatus(func(s *UpdateStatus) { s.DownloadProgress = pct })
+		},
+	}
+	if _, err := io.Copy(f, io.TeeReader(resp.Body, pw)); err != nil {
+		return fmt.Errorf("save download: %w", err)
+	}
 	return nil
 }
 
@@ -410,6 +424,39 @@ func (u *Updater) GetChannel() UpdateChannel {
 	u.statusMutex.RLock()
 	defer u.statusMutex.RUnlock()
 	return u.channel
+}
+
+// ListBetaVersions returns published beta (prerelease) versions, newest first,
+// for the Settings version picker. Drafts and stable releases are excluded.
+func (u *Updater) ListBetaVersions(ctx context.Context) ([]VersionOption, error) {
+	releases, err := u.releaseClient.List(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	var options []VersionOption
+	for _, rel := range releases {
+		if rel.Draft || !rel.Prerelease {
+			continue
+		}
+		if _, err := normalizeSemver(rel.TagName); err != nil {
+			continue // malformed tags are not offerable
+		}
+		options = append(options, VersionOption{
+			Version:     strings.TrimPrefix(rel.TagName, "v"),
+			PublishedAt: rel.PublishedAt,
+		})
+	}
+
+	sort.SliceStable(options, func(i, j int) bool {
+		vi, _ := normalizeSemver(options[i].Version)
+		vj, _ := normalizeSemver(options[j].Version)
+		return semver.Compare(vi, vj) > 0
+	})
+	if len(options) > 0 {
+		options[0].IsLatest = true
+	}
+	return options, nil
 }
 
 // setStatus updates the status using a modifier function
