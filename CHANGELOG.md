@@ -97,13 +97,9 @@ summaries rather than copied private commit messages.
 
 ## [v3.2.1] - 2025-12-05
 
-### Changed
-
-- Expanded party-server development and administration tooling used to test party, friend, and client flows.
-
 ### Historical note
 
-- No additional end-user change was clearly documented for this release, so internal tooling changes are not presented as user-facing features.
+- No version-specific end-user change was clearly documented for this release, so none is inferred here.
 
 ## [v3.2.0] - 2025-12-04
 
