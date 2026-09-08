@@ -140,6 +140,62 @@ const proxyInjectScript = `
     partyLayer = window.L.layerGroup().addTo(m);
   }
 
+  // ── Cookie banner leftover space ────────────────────────────────────
+  //
+  // tarkov.dev sizes the map by subtracting .CookieConsent height, but only
+  // recalculates on its own render or on window resize. Accepting the banner
+  // is an App-level event, so the short height sticks. We never set their
+  // CookieConsent cookie and never hide the banner; we wait until the player
+  // has seen it and it is gone, then ask their own updateSize to run.
+  function cookieBannerGone() {
+    var el = document.querySelector('.CookieConsent');
+    return !el || el.offsetHeight === 0;
+  }
+
+  function mapLooksShort() {
+    var el = document.getElementById('leaflet-map');
+    return !!(el && el.offsetHeight < window.innerHeight - 24);
+  }
+
+  function fillMapAfterConsent() {
+    window.dispatchEvent(new Event('resize'));
+    requestAnimationFrame(function () {
+      if (!mapLooksShort()) return;
+      var h = window.innerHeight + 'px';
+      document.documentElement.style.setProperty('--display-height', h);
+      var mapEl = document.getElementById('leaflet-map');
+      if (mapEl) mapEl.style.height = h;
+      if (mapInstance && mapInstance.invalidateSize) {
+        mapInstance.invalidateSize({animate: false});
+      }
+    });
+  }
+
+  function watchCookieBanner() {
+    var seen = false;
+    var ticks = 0;
+    var timer = setInterval(function () {
+      ticks++;
+      if (!cookieBannerGone()) {
+        seen = true;
+        return;
+      }
+      if (seen) {
+        clearInterval(timer);
+        fillMapAfterConsent();
+        fetch('/nexus/accept-cookies', { method: 'POST', headers: { 'X-Nexus-Accept-Cookies': '1' } }).catch(function () {});
+        return;
+      }
+      // Banner never appeared. Wait a few ticks so React can still mount it
+      // before we treat a short map as "already consented".
+      if (ticks >= 10) {
+        clearInterval(timer);
+        if (mapLooksShort()) fillMapAfterConsent();
+      }
+    }, 300);
+  }
+  watchCookieBanner();
+
   // ── WebSocket ──────────────────────────────────────────────────────────
 
   function connectWS() {

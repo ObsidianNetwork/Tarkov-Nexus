@@ -71,6 +71,14 @@
         box-shadow: 0 20px 40px rgba(88, 101, 242, 0.15);
     }
 
+    /* Static display-only card: suppresses the glass-card hover affordance
+       (purple border, lift, glow). Use for boxes with no clickable action. */
+    .glass-card-static:hover {
+        @apply border-border-color/50;
+        transform: none;
+        box-shadow: none;
+    }
+
     /* Glass Panel */
     .glass-panel {
         @apply bg-bg-card/90 backdrop-blur-lg border border-border-color/30 rounded-xl;

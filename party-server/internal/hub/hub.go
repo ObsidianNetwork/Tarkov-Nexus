@@ -26,14 +26,14 @@ var natoAlphabet = []string{
 
 // Hub manages all WebSocket connections, parties, and friends
 type Hub struct {
-	clients     map[string]*models.Client // clientID -> Client
-	parties     map[string]*models.Party  // partyCode -> Party
-	invites     map[string][]*models.PartyInvite // toClientID -> invites
-	storage     *storage.Storage
-	mu          sync.RWMutex
-	inviteMu    sync.RWMutex
-	done        chan struct{} // closed by Close to stop the cleanup routine
-	closeOnce   sync.Once
+	clients   map[string]*models.Client        // clientID -> Client
+	parties   map[string]*models.Party         // partyCode -> Party
+	invites   map[string][]*models.PartyInvite // toClientID -> invites
+	storage   *storage.Storage
+	mu        sync.RWMutex
+	inviteMu  sync.RWMutex
+	done      chan struct{} // closed by Close to stop the cleanup routine
+	closeOnce sync.Once
 }
 
 // NewHub creates a new Hub instance
@@ -271,15 +271,55 @@ func (h *Hub) HandleConnection(conn *websocket.Conn) {
 	}
 }
 
+// maxDisplayNameLen caps client-provided display names.
+const maxDisplayNameLen = 16
+
+// sanitizeDisplayName trims whitespace and caps the length of a
+// client-provided display name. Clients are untrusted, so this runs on every
+// registration regardless of what the client UI allows. Falls back to
+// "Player" when nothing usable remains.
+func sanitizeDisplayName(name string) string {
+	name = strings.TrimSpace(name)
+	runes := []rune(name)
+	if len(runes) > maxDisplayNameLen {
+		runes = runes[:maxDisplayNameLen]
+	}
+	if len(runes) == 0 {
+		return "Player"
+	}
+	return string(runes)
+}
+
 // handleRegister processes a registration message
 func (h *Hub) handleRegister(conn *websocket.Conn, msg *models.RegisterMessage) *models.Client {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
+	// Clients are untrusted: trim and cap the display name before it reaches
+	// storage, party broadcasts, friend lists, and the admin console.
+	msg.DisplayName = sanitizeDisplayName(msg.DisplayName)
+
+	// Enforce unique display names among connected clients (case-insensitive).
+	// A rejected registration also closes the connection so the client returns
+	// to a clean disconnected state and can retry with a different name.
+	nameKey := strings.ToLower(msg.DisplayName)
+	for id, c := range h.clients {
+		if id != msg.ClientID && strings.ToLower(c.DisplayName) == nameKey {
+			log.Printf("[Hub] Rejected registration: display name %q already in use", msg.DisplayName)
+			h.sendError(conn, models.ErrCodeNameTaken, fmt.Sprintf("Display name %q is already in use. Please choose another.", msg.DisplayName))
+			if conn != nil {
+				conn.Close()
+			}
+			return nil
+		}
+	}
+
 	// Check if already connected
 	if existing, ok := h.clients[msg.ClientID]; ok {
-		// Close old connection
-		existing.Conn.Close()
+		// Close old connection (test clients have nil conns)
+		if existing.Conn != nil {
+			existing.Conn.Close()
+		}
 	}
 
 	// Store in database
@@ -1651,13 +1691,13 @@ func generateTestClientID() string {
 
 // FriendRequestInfo represents a friend request for the admin API
 type FriendRequestInfo struct {
-	FromClientID   string `json:"fromClientId"`
-	FromName       string `json:"fromName"`
-	ToClientID     string `json:"toClientId"`
-	ToName         string `json:"toName"`
-	SentAt         string `json:"sentAt"`
-	FromIsTest     bool   `json:"fromIsTest"`
-	ToIsTest       bool   `json:"toIsTest"`
+	FromClientID string `json:"fromClientId"`
+	FromName     string `json:"fromName"`
+	ToClientID   string `json:"toClientId"`
+	ToName       string `json:"toName"`
+	SentAt       string `json:"sentAt"`
+	FromIsTest   bool   `json:"fromIsTest"`
+	ToIsTest     bool   `json:"toIsTest"`
 }
 
 // GetAllPendingFriendRequests returns all pending friend requests for connected clients

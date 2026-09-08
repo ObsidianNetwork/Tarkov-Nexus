@@ -25,6 +25,7 @@ import {
 } from '../../wailsjs/go/main/App';
 import { EventsOn } from '../../wailsjs/runtime/runtime';
 import { Button, Card } from '../components/ui';
+import { generateDisplayName } from '../utils';
 import {
   UserGroupIcon,
   ClipboardDocumentIcon,
@@ -69,7 +70,7 @@ export default function PartyCentral() {
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState<'party' | 'friends'>('party');
   const [sentInvites, setSentInvites] = useState<Set<string>>(new Set());
-  const [displayName, setDisplayName] = useState('Player');
+  const [displayName, setDisplayName] = useState('');
 
   const refreshStatus = useCallback(async () => {
     try {
@@ -110,8 +111,13 @@ export default function PartyCentral() {
   // Load display name from config
   useEffect(() => {
     GetConfig().then((cfg: any) => {
-      if (cfg?.partySettings?.displayName) {
-        setDisplayName(cfg.partySettings.displayName);
+      const saved = cfg?.partySettings?.displayName;
+      if (saved && saved !== 'Player') {
+        setDisplayName(saved.slice(0, 16));
+      } else {
+        // Unset (or legacy "Player" default): prefill a random one so users
+        // don't all collide on "Player"
+        setDisplayName(generateDisplayName());
       }
     }).catch(() => {});
   }, []);
@@ -219,7 +225,7 @@ export default function PartyCentral() {
     setError('');
     try {
       // Pass display name directly — Go side saves it to config
-      await ConnectToPartyServer(displayName.trim() || 'Player');
+      await ConnectToPartyServer(displayName.trim() || generateDisplayName());
     } catch (err: any) {
       setError(err.message || 'Failed to connect');
     } finally {
@@ -400,11 +406,12 @@ export default function PartyCentral() {
                 <input
                   type="text"
                   value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
+                  maxLength={16}
+                  onChange={(e) => setDisplayName(e.target.value.slice(0, 16))}
                   placeholder="Enter your name"
                   className="glass-input w-full px-4 py-3 text-lg"
                 />
-                <p className="text-xs text-text-muted mt-1">This is how other players will see you</p>
+                <p className="text-xs text-text-muted mt-1">This is how other players will see you ({displayName.length}/16)</p>
               </div>
             </div>
 

@@ -13,21 +13,28 @@
       --wails-draggable: drag;
       -webkit-user-select: none; user-select: none;
     }
-    /* Buttons float centered on top of drag region */
+    /* Compact pill — not a title bar. Only as wide as the three buttons. */
     #titlebar {
-      position: fixed; top: 0; left: 50%; transform: translateX(-50%); z-index: 20;
-      display: flex; align-items: center; height: 32px;
+      position: fixed; top: 8px; left: 50%; transform: translateX(-50%); z-index: 20;
+      display: flex; align-items: center;
+      padding: 3px; border-radius: 9px;
+      background: rgba(8, 10, 14, 0.78);
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.55);
+      --wails-draggable: no-drag;
       -webkit-user-select: none; user-select: none;
     }
 
-    /* Title bar buttons */
+    /* Title bar buttons — light at rest so a busy map does not swallow them */
     .tb-btn {
       display: flex; align-items: center; justify-content: center;
-      width: 32px; height: 32px; border: none; background: transparent;
-      cursor: pointer; color: rgba(156, 163, 175, 0.7);
+      width: 30px; height: 24px; border: none; background: transparent;
+      cursor: pointer; color: #f5f5f4;
+      border-radius: 6px;
       transition: background 0.15s, color 0.15s;
     }
     .tb-btn:hover { background: rgba(55, 65, 81, 0.6); color: #e5e7eb; }
+    .tb-btn.close { color: #fca5a5; }
     .tb-btn.close:hover { background: rgba(239, 68, 68, 0.3); color: #ef4444; }
 
     /* Pin button */

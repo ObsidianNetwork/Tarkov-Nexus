@@ -78,3 +78,21 @@ export function getLogLevelBadge(level: string): string {
       return 'bg-gray-500/10 text-gray-400 border-gray-500/20';
   }
 }
+
+// Random display name generator: adjective + animal + two digits.
+// Word lists are capped so the result always fits the 16-char server limit.
+const NAME_ADJECTIVES = [
+  'Swift', 'Silent', 'Cunning', 'Lucky', 'Brave', 'Clever', 'Bold', 'Quick',
+  'Fierce', 'Mighty', 'Wild', 'Sharp', 'Sneaky', 'Rapid', 'Sturdy', 'Lucid',
+];
+const NAME_ANIMALS = [
+  'Badger', 'Wolf', 'Fox', 'Hawk', 'Raven', 'Lynx', 'Otter', 'Bear',
+  'Viper', 'Falcon', 'Cobra', 'Ferret', 'Stoat', 'Gecko', 'Mantis', 'Tiger',
+];
+
+export function generateDisplayName(): string {
+  const adj = NAME_ADJECTIVES[Math.floor(Math.random() * NAME_ADJECTIVES.length)];
+  const animal = NAME_ANIMALS[Math.floor(Math.random() * NAME_ANIMALS.length)];
+  const num = Math.floor(Math.random() * 90) + 10;
+  return `${adj}${animal}${num}`;
+}

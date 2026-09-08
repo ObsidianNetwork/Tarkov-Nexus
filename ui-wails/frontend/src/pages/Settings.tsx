@@ -23,15 +23,19 @@ import {
   SetUpdateChannel,
   SetAutoUpdateCheck,
   OpenReleaseURL,
+  ListBetaVersions,
+  DownloadUpdate,
 } from '../../wailsjs/go/main/App';
+import type { updater } from '../../wailsjs/go/models';
 import { cn } from '../utils';
 import type { Config, UpdateInfo, UpdateStatus } from '../types';
+import { isDowngrade } from '../utils/version';
 import { Button, Input, Badge, Card } from '../components/ui';
 import { EventsOn } from '../../wailsjs/runtime/runtime';
 
 function Section({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) {
   return (
-    <div className="glass-card p-6 rounded-xl">
+    <div className="glass-card glass-card-static p-6 rounded-xl">
       <div className="flex items-center gap-3 mb-5">
         <div className="text-primary-purple">{icon}</div>
         <h2 className="text-lg font-semibold text-text-primary">{title}</h2>
@@ -54,6 +58,9 @@ export function Settings() {
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
   const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
   const [updateMessage, setUpdateMessage] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null);
+  const [betaVersions, setBetaVersions] = useState<updater.VersionOption[] | null>(null);
+  const [selectedBeta, setSelectedBeta] = useState('');
+  const [isInstallingBeta, setIsInstallingBeta] = useState(false);
 
   useEffect(() => {
     loadConfig();
@@ -82,6 +89,9 @@ export function Settings() {
     try {
       const cfg = await GetConfig();
       setConfig(cfg as Config);
+      if (cfg.updateSettings?.updateChannel === 'beta') {
+        await loadBetaVersions();
+      }
     } catch (err) {
       console.error('Failed to load config:', err);
     } finally {
@@ -190,9 +200,52 @@ export function Settings() {
   const handleUpdateChannelChange = async (channel: 'stable' | 'beta') => {
     if (!config) return;
     try {
+      // Persists config, switches the backend channel, and triggers an
+      // immediate recheck so the user sees what the new channel offers.
       await SetUpdateChannel(channel);
       setConfig({ ...config, updateSettings: { ...config.updateSettings, updateChannel: channel } });
-    } catch (err) { console.error(err); }
+      if (channel === 'beta') {
+        await loadBetaVersions();
+      }
+      setUpdateMessage({ type: 'info', text: channel === 'beta' ? 'Switched to beta channel — checking for the latest beta...' : 'Switched to stable channel — checking for the latest release...' });
+      setTimeout(() => setUpdateMessage(null), 4000);
+    } catch (err) {
+      console.error(err);
+      setUpdateMessage({ type: 'error', text: 'Failed to switch channel' });
+      setTimeout(() => setUpdateMessage(null), 3000);
+    }
+  };
+
+  const loadBetaVersions = async () => {
+    try {
+      const versions = await ListBetaVersions();
+      setBetaVersions(versions ?? []);
+      setSelectedBeta(versions?.[0]?.version ?? '');
+    } catch (err) {
+      console.error(err);
+      setBetaVersions([]);
+    }
+  };
+
+  const handleInstallBeta = async () => {
+    if (!selectedBeta || !updateStatus) return;
+    if (isDowngrade(selectedBeta, updateStatus.currentVersion)) {
+      const ok = window.confirm(
+        `Install ${selectedBeta}? This is older than your current version (${updateStatus.currentVersion}).`
+      );
+      if (!ok) return;
+    }
+    setIsInstallingBeta(true);
+    try {
+      await DownloadUpdate(selectedBeta);
+    } catch (err) {
+      console.error(err);
+      setUpdateMessage({ type: 'error', text: err instanceof Error ? err.message : 'Install failed' });
+      setTimeout(() => setUpdateMessage(null), 4000);
+    } finally {
+      setIsInstallingBeta(false);
+      await loadUpdateStatus();
+    }
   };
 
   const handleAutoCheckToggle = async (enabled: boolean) => {
@@ -507,15 +560,86 @@ export function Settings() {
                 Auto-check on startup
               </span>
             </label>
+          </div>
 
-            <select
-              value={config.updateSettings.updateChannel}
-              onChange={(e) => handleUpdateChannelChange(e.target.value as 'stable' | 'beta')}
-              className="glass-input px-3 py-1 text-sm"
-            >
-              <option value="stable">Stable</option>
-              <option value="beta">Beta</option>
-            </select>
+          <div className="space-y-3">
+            <div>
+              <div className="text-sm font-medium text-text-primary mb-1">Update channel</div>
+              <div className="text-xs text-text-muted mb-3">
+                Beta builds are pre-releases published for testing before each stable release
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => handleUpdateChannelChange('stable')}
+                  className={cn(
+                    'glass-card p-4 text-left',
+                    config.updateSettings.updateChannel === 'stable'
+                      ? 'glass-card-static border-neon-green/60 bg-neon-green/5'
+                      : 'hover:border-primary-purple/50'
+                  )}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-sm font-semibold text-text-primary">Stable</span>
+                    <Badge variant="success" className="text-[10px]">STABLE</Badge>
+                  </div>
+                  <p className="text-xs text-text-muted">Official releases. Recommended for most users.</p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleUpdateChannelChange('beta')}
+                  className={cn(
+                    'glass-card p-4 text-left',
+                    config.updateSettings.updateChannel === 'beta'
+                      ? 'glass-card-static border-warning/60 bg-warning/5'
+                      : 'hover:border-primary-purple/50'
+                  )}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-sm font-semibold text-text-primary">Beta</span>
+                    <Badge variant="warning" className="text-[10px]">BETA</Badge>
+                  </div>
+                  <p className="text-xs text-text-muted">Pre-release builds with the newest changes. May be less stable.</p>
+                </button>
+              </div>
+            </div>
+
+            {config.updateSettings.updateChannel === 'beta' && (
+              <div className="flex items-center justify-between gap-3 pt-1">
+                <div>
+                  <div className="text-sm font-medium text-text-primary">Beta version</div>
+                  <div className="text-xs text-text-muted">
+                    Install any published beta — the newest is offered automatically, or pick one below
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <select
+                    value={selectedBeta}
+                    onChange={(e) => setSelectedBeta(e.target.value)}
+                    className="glass-input px-3 py-1 text-sm max-w-48"
+                    disabled={isInstallingBeta}
+                  >
+                    {(betaVersions ?? []).map((v) => (
+                      <option key={v.version} value={v.version}>
+                        {v.version}{v.isLatest ? ' (latest)' : ''}
+                      </option>
+                    ))}
+                    {betaVersions !== null && betaVersions.length === 0 && (
+                      <option value="">No beta releases published</option>
+                    )}
+                  </select>
+                  <Button
+                    onClick={handleInstallBeta}
+                    variant="secondary"
+                    size="sm"
+                    disabled={!selectedBeta || isInstallingBeta}
+                    loading={isInstallingBeta}
+                  >
+                    Install
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         </Section>
       </div>

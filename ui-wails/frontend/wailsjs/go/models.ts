@@ -83,6 +83,7 @@ export namespace config {
 	    reconnectOptions: ReconnectOptions;
 	    updateSettings: UpdateSettings;
 	    partySettings: PartySettings;
+	    dismissedNotices: string[];
 	    setupComplete: boolean;
 	
 	    static createFrom(source: any = {}) {
@@ -107,6 +108,7 @@ export namespace config {
 	        this.reconnectOptions = this.convertValues(source["reconnectOptions"], ReconnectOptions);
 	        this.updateSettings = this.convertValues(source["updateSettings"], UpdateSettings);
 	        this.partySettings = this.convertValues(source["partySettings"], PartySettings);
+	        this.dismissedNotices = source["dismissedNotices"];
 	        this.setupComplete = source["setupComplete"];
 	    }
 	
@@ -155,6 +157,54 @@ export namespace main {
 
 }
 
+export namespace notice {
+	
+	export class Notice {
+	    id: string;
+	    severity: string;
+	    title: string;
+	    body: string;
+	    link?: string;
+	    linkText?: string;
+	    // Go type: time
+	    expires?: any;
+	
+	    static createFrom(source: any = {}) {
+	        return new Notice(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.severity = source["severity"];
+	        this.title = source["title"];
+	        this.body = source["body"];
+	        this.link = source["link"];
+	        this.linkText = source["linkText"];
+	        this.expires = this.convertValues(source["expires"], null);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+
+}
+
 export namespace updater {
 	
 	export class UpdateInfo {
@@ -184,6 +234,41 @@ export namespace updater {
 	        this.assetName = source["assetName"];
 	        this.assetSize = source["assetSize"];
 	        this.isPrerelease = source["isPrerelease"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class VersionOption {
+	    version: string;
+	    // Go type: time
+	    publishedAt: any;
+	    isLatest: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new VersionOption(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.version = source["version"];
+	        this.publishedAt = this.convertValues(source["publishedAt"], null);
+	        this.isLatest = source["isLatest"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

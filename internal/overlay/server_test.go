@@ -4,6 +4,10 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/http/httptest"
+	"os"
+	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -210,5 +214,60 @@ func TestAcceptsGzip(t *testing.T) {
 		if got := acceptsGzip(tc.header); got != tc.want {
 			t.Errorf("acceptsGzip(%q) = %v, want %v", tc.header, got, tc.want)
 		}
+	}
+}
+
+func TestHandleAcceptCookies(t *testing.T) {
+	s := NewServer(0, nopLogger{})
+	s.consentFile = filepath.Join(t.TempDir(), "accepted")
+	s.cookiesAccepted = false
+
+	getRec := httptest.NewRecorder()
+	s.handleAcceptCookies(getRec, httptest.NewRequest(http.MethodGet, "/nexus/accept-cookies", nil))
+	if getRec.Result().StatusCode != http.StatusMethodNotAllowed {
+		t.Fatalf("GET status %d, want 405", getRec.Result().StatusCode)
+	}
+
+	cross := httptest.NewRequest(http.MethodPost, "/nexus/accept-cookies", nil)
+	cross.Header.Set("X-Nexus-Accept-Cookies", "1")
+	cross.Header.Set("Origin", "https://evil.example")
+	crossRec := httptest.NewRecorder()
+	s.handleAcceptCookies(crossRec, cross)
+	if crossRec.Result().StatusCode != http.StatusForbidden {
+		t.Fatalf("cross-origin POST status %d, want 403", crossRec.Result().StatusCode)
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "/nexus/accept-cookies", nil)
+	req.Header.Set("X-Nexus-Accept-Cookies", "1")
+	rec := httptest.NewRecorder()
+	s.handleAcceptCookies(rec, req)
+
+	resp := rec.Result()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status %d, want 200", resp.StatusCode)
+	}
+	var got *http.Cookie
+	for _, c := range resp.Cookies() {
+		if c.Name == "CookieConsent" {
+			got = c
+		}
+	}
+	if got == nil || got.Value != "true" {
+		t.Fatal("missing Set-Cookie: CookieConsent=true")
+	}
+	if !got.Partitioned || !got.Secure || got.SameSite != http.SameSiteNoneMode {
+		t.Errorf("cookie must be Partitioned+Secure+SameSite=None so the iframe can keep it; got partitioned=%v secure=%v samesite=%v",
+			got.Partitioned, got.Secure, got.SameSite)
+	}
+	if !s.hasCookieConsent() {
+		t.Error("consent was not remembered in memory")
+	}
+	if _, err := os.Stat(s.consentFile); err != nil {
+		t.Errorf("consent file not written: %v", err)
+	}
+
+	header := cookieConsentCookie().String()
+	if !strings.Contains(header, "Partitioned") {
+		t.Errorf("serialized cookie missing Partitioned: %s", header)
 	}
 }

@@ -4,66 +4,67 @@ import "encoding/json"
 
 // Message types - Client to Server
 const (
-	MsgTypeRegister              = "register"
-	MsgTypeCreateParty           = "create_party"
-	MsgTypeJoinParty             = "join_party"
-	MsgTypeLeaveParty            = "leave_party"
-	MsgTypePosition              = "position"
-	MsgTypeAddFriend             = "add_friend"              // Now sends a friend request
-	MsgTypeAcceptFriendRequest   = "accept_friend_request"
-	MsgTypeDeclineFriendRequest  = "decline_friend_request"
-	MsgTypeCancelFriendRequest   = "cancel_friend_request"
-	MsgTypeGetPendingFriendReqs  = "get_pending_friend_requests"
-	MsgTypeRemoveFriend          = "remove_friend"
-	MsgTypeGetFriends            = "get_friends"
-	MsgTypeInviteFriend          = "invite_friend"
-	MsgTypeAcceptInvite          = "accept_invite"
-	MsgTypeDeclineInvite         = "decline_invite"
-	MsgTypeCancelInvite          = "cancel_invite"
-	MsgTypePing                  = "ping"
+	MsgTypeRegister             = "register"
+	MsgTypeCreateParty          = "create_party"
+	MsgTypeJoinParty            = "join_party"
+	MsgTypeLeaveParty           = "leave_party"
+	MsgTypePosition             = "position"
+	MsgTypeAddFriend            = "add_friend" // Now sends a friend request
+	MsgTypeAcceptFriendRequest  = "accept_friend_request"
+	MsgTypeDeclineFriendRequest = "decline_friend_request"
+	MsgTypeCancelFriendRequest  = "cancel_friend_request"
+	MsgTypeGetPendingFriendReqs = "get_pending_friend_requests"
+	MsgTypeRemoveFriend         = "remove_friend"
+	MsgTypeGetFriends           = "get_friends"
+	MsgTypeInviteFriend         = "invite_friend"
+	MsgTypeAcceptInvite         = "accept_invite"
+	MsgTypeDeclineInvite        = "decline_invite"
+	MsgTypeCancelInvite         = "cancel_invite"
+	MsgTypePing                 = "ping"
 )
 
 // Message types - Server to Client
 const (
-	MsgTypeRegistered              = "registered"
-	MsgTypePartyCreated            = "party_created"
-	MsgTypePartyJoined             = "party_joined"
-	MsgTypeMemberJoined            = "member_joined"
-	MsgTypeMemberLeft              = "member_left"
-	MsgTypePositionUpdate          = "position_update"
-	MsgTypeFriendsList             = "friends_list"
-	MsgTypeFriendOnline            = "friend_online"
-	MsgTypeFriendOffline           = "friend_offline"
-	MsgTypeFriendRequest           = "friend_request"           // Incoming friend request
-	MsgTypeFriendRequestSent       = "friend_request_sent"      // Confirmation request was sent
-	MsgTypeFriendRequestAccepted   = "friend_request_accepted"  // Someone accepted your request
-	MsgTypeFriendRequestDeclined   = "friend_request_declined"  // Someone declined your request
-	MsgTypeFriendRequestCancelled  = "friend_request_cancelled" // Someone cancelled their request
-	MsgTypeFriendRequestsList      = "friend_requests_list"     // List of pending requests
-	MsgTypePartyInvite             = "party_invite"
-	MsgTypeInviteAccepted          = "invite_accepted"
-	MsgTypeInviteDeclined          = "invite_declined"
-	MsgTypeInviteCancelled         = "invite_cancelled"
-	MsgTypeError                   = "error"
-	MsgTypePong                    = "pong"
-	MsgTypePartyLeft               = "party_left"
-	MsgTypeFriendAdded             = "friend_added"
-	MsgTypeFriendRemoved           = "friend_removed"
+	MsgTypeRegistered             = "registered"
+	MsgTypePartyCreated           = "party_created"
+	MsgTypePartyJoined            = "party_joined"
+	MsgTypeMemberJoined           = "member_joined"
+	MsgTypeMemberLeft             = "member_left"
+	MsgTypePositionUpdate         = "position_update"
+	MsgTypeFriendsList            = "friends_list"
+	MsgTypeFriendOnline           = "friend_online"
+	MsgTypeFriendOffline          = "friend_offline"
+	MsgTypeFriendRequest          = "friend_request"           // Incoming friend request
+	MsgTypeFriendRequestSent      = "friend_request_sent"      // Confirmation request was sent
+	MsgTypeFriendRequestAccepted  = "friend_request_accepted"  // Someone accepted your request
+	MsgTypeFriendRequestDeclined  = "friend_request_declined"  // Someone declined your request
+	MsgTypeFriendRequestCancelled = "friend_request_cancelled" // Someone cancelled their request
+	MsgTypeFriendRequestsList     = "friend_requests_list"     // List of pending requests
+	MsgTypePartyInvite            = "party_invite"
+	MsgTypeInviteAccepted         = "invite_accepted"
+	MsgTypeInviteDeclined         = "invite_declined"
+	MsgTypeInviteCancelled        = "invite_cancelled"
+	MsgTypeError                  = "error"
+	MsgTypePong                   = "pong"
+	MsgTypePartyLeft              = "party_left"
+	MsgTypeFriendAdded            = "friend_added"
+	MsgTypeFriendRemoved          = "friend_removed"
 )
 
 // Error codes
 const (
-	ErrCodeInvalidMessage  = "INVALID_MESSAGE"
-	ErrCodeInvalidParty    = "INVALID_PARTY"
-	ErrCodePartyFull       = "PARTY_FULL"
-	ErrCodeNotInParty      = "NOT_IN_PARTY"
-	ErrCodeAlreadyInParty  = "ALREADY_IN_PARTY"
-	ErrCodeNotRegistered   = "NOT_REGISTERED"
-	ErrCodeFriendNotFound  = "FRIEND_NOT_FOUND"
-	ErrCodeAlreadyFriends  = "ALREADY_FRIENDS"
-	ErrCodeInviteNotFound  = "INVITE_NOT_FOUND"
-	ErrCodeInternalError   = "INTERNAL_ERROR"
-	ErrCodeRateLimit       = "RATE_LIMIT"
+	ErrCodeInvalidMessage = "INVALID_MESSAGE"
+	ErrCodeInvalidParty   = "INVALID_PARTY"
+	ErrCodePartyFull      = "PARTY_FULL"
+	ErrCodeNotInParty     = "NOT_IN_PARTY"
+	ErrCodeAlreadyInParty = "ALREADY_IN_PARTY"
+	ErrCodeNotRegistered  = "NOT_REGISTERED"
+	ErrCodeFriendNotFound = "FRIEND_NOT_FOUND"
+	ErrCodeAlreadyFriends = "ALREADY_FRIENDS"
+	ErrCodeInviteNotFound = "INVITE_NOT_FOUND"
+	ErrCodeInternalError  = "INTERNAL_ERROR"
+	ErrCodeRateLimit      = "RATE_LIMIT"
+	ErrCodeNameTaken      = "NAME_TAKEN"
 )
 
 // BaseMessage is the base structure for all messages
@@ -168,9 +169,9 @@ type PartyCreatedMessage struct {
 }
 
 type PartyJoinedMessage struct {
-	Type      string         `json:"type"`
-	PartyCode string         `json:"partyCode"`
-	Members   []MemberInfo   `json:"members"`
+	Type      string       `json:"type"`
+	PartyCode string       `json:"partyCode"`
+	Members   []MemberInfo `json:"members"`
 }
 
 type MemberInfo struct {
@@ -222,9 +223,9 @@ type FriendOfflineMessage struct {
 // Friend request messages (Server to Client)
 
 type FriendRequestMessage struct {
-	Type        string `json:"type"`
+	Type         string `json:"type"`
 	FromClientID string `json:"fromClientId"`
-	DisplayName string `json:"displayName"`
+	DisplayName  string `json:"displayName"`
 }
 
 type FriendRequestSentMessage struct {
@@ -246,7 +247,7 @@ type FriendRequestDeclinedMessage struct {
 }
 
 type FriendRequestCancelledMessage struct {
-	Type        string `json:"type"`
+	Type         string `json:"type"`
 	FromClientID string `json:"fromClientId"`
 }
 
@@ -263,10 +264,10 @@ type FriendRequestsListMessage struct {
 }
 
 type PartyInviteMessage struct {
-	Type        string `json:"type"`
+	Type         string `json:"type"`
 	FromClientID string `json:"fromClientId"`
-	FromName    string `json:"fromDisplayName"`
-	PartyCode   string `json:"partyCode"`
+	FromName     string `json:"fromDisplayName"`
+	PartyCode    string `json:"partyCode"`
 }
 
 type InviteAcceptedMessage struct {

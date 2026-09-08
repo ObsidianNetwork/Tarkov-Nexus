@@ -8,6 +8,7 @@ import {
   ExclamationTriangleIcon
 } from '@heroicons/react/24/outline';
 import { Button } from './ui';
+import { isDowngrade } from '../utils/version';
 
 interface UpdateInfo {
   version: string;
@@ -32,6 +33,7 @@ interface UpdateNotificationProps {
   isUpdateReady?: boolean;
   downloadProgress?: number;
   error?: string;
+  currentVersion?: string;
 }
 
 export function UpdateNotification({
@@ -45,10 +47,14 @@ export function UpdateNotification({
   isUpdateReady = false,
   downloadProgress = 0,
   error = '',
+  currentVersion,
 }: UpdateNotificationProps) {
   const [showReleaseNotes, setShowReleaseNotes] = useState(false);
 
   if (!updateInfo) return null;
+
+  const downgrade =
+    currentVersion !== undefined && isDowngrade(updateInfo.version, currentVersion);
 
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return '0 Bytes';
@@ -106,10 +112,11 @@ export function UpdateNotification({
                       </div>
                       <div>
                         <Dialog.Title className="text-lg font-semibold text-text-primary">
-                          Update Available
+                          {downgrade ? 'Switch to Older Version' : 'Update Available'}
                         </Dialog.Title>
                         <p className="text-sm text-text-muted">
                           Version {updateInfo.version}
+                          {downgrade ? ' (downgrade from ' + currentVersion + ')' : ''}
                         </p>
                       </div>
                     </div>
@@ -245,7 +252,13 @@ export function UpdateNotification({
                         disabled={isDownloading || isInstalling}
                         loading={isDownloading || isInstalling}
                       >
-                        {isDownloading ? 'Downloading...' : isInstalling ? 'Installing...' : 'Update Now'}
+                        {isDownloading
+                          ? 'Downloading...'
+                          : isInstalling
+                            ? 'Installing...'
+                            : downgrade
+                              ? 'Install (downgrade)'
+                              : 'Update Now'}
                       </Button>
                     </>
                   ) : (
