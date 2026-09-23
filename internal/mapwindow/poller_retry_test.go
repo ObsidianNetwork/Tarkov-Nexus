@@ -40,10 +40,10 @@ func TestPoller_RetriesFailedWriteWithoutAnotherMove(t *testing.T) {
 
 func TestPoller_RetriesStoreWriteAtBoundedIntervals(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
-		// Given a real placement store blocked by a temporary-file conflict.
+		// Given a real placement store whose destination is blocked by a directory.
 		path := filepath.Join(t.TempDir(), "mapwindow.json")
 		store := NewStore(path)
-		if err := os.Mkdir(path+".tmp", 0o700); err != nil {
+		if err := os.Mkdir(path, 0o700); err != nil {
 			t.Fatal(err)
 		}
 		clk := newFakeClock()
@@ -78,7 +78,7 @@ func TestPoller_RetriesStoreWriteAtBoundedIntervals(t *testing.T) {
 		}
 
 		// When the conflict is removed without another window movement.
-		if err := os.Remove(path + ".tmp"); err != nil {
+		if err := os.Remove(path); err != nil {
 			t.Fatal(err)
 		}
 		clk.Advance(time.Second - time.Millisecond)

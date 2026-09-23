@@ -11,8 +11,7 @@ import (
 func TestPoller_NoWriteWhenRectUnchanged(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		h := newHarness(t)
-		// First tick: initial read establishes a baseline. The rect the window
-		// launched with is not a "change" worth writing.
+		// The initial read is a baseline, not a change worth writing.
 		for i := 0; i < 5; i++ {
 			h.clk.Advance(time.Second)
 		}
@@ -228,8 +227,8 @@ func TestPoller_DoubleStartRunsOneLoop(t *testing.T) {
 		mu.Lock()
 		n := reads
 		mu.Unlock()
-		if n != 1 {
-			t.Fatalf("one tick produced %d reads; a second loop is running", n)
+		if n != 2 {
+			t.Fatalf("baseline plus one tick produced %d reads, want 2", n)
 		}
 		p.Stop() // must not panic on a double-closed channel
 		p.Stop()
