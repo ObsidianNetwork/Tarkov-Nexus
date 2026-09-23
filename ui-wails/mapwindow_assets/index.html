@@ -9,7 +9,7 @@
 
     /* Transparent drag bar across full top */
     #titlebar-drag {
-      position: fixed; top: 0; left: 0; right: 0; height: 32px; z-index: 19;
+      position: fixed; top: 0; left: 0; right: 0; height: 32px; z-index: 17;
       --wails-draggable: drag;
       -webkit-user-select: none; user-select: none;
     }
@@ -34,6 +34,8 @@
       transition: background 0.15s, color 0.15s;
     }
     .tb-btn:hover { background: rgba(55, 65, 81, 0.6); color: #e5e7eb; }
+    .tb-btn:disabled { opacity: 0.45; cursor: default; }
+    .tb-btn:disabled:hover { background: transparent; color: #f5f5f4; }
     .tb-btn.close { color: #fca5a5; }
     .tb-btn.close:hover { background: rgba(239, 68, 68, 0.3); color: #ef4444; }
 
@@ -41,9 +43,69 @@
     #pin-btn.pinned { color: #facc15; background: rgba(250, 204, 21, 0.15); }
     #pin-btn.pinned:hover { background: rgba(250, 204, 21, 0.25); }
 
+    /* Shape button: lit while the map is a circle. Opacity button: lit while
+       its popover is open. Same yellow as the pin so the pill has one accent. */
+    #shape-btn.active, #opacity-btn.active { color: #facc15; background: rgba(250, 204, 21, 0.15); }
+    #shape-btn.active:hover, #opacity-btn.active:hover { background: rgba(250, 204, 21, 0.25); }
+    #shape-btn .ico-circle, #shape-btn.active .ico-square { display: none; }
+    #shape-btn.active .ico-circle { display: block; }
+
+    /* Opacity popover: under the pill, same styling, never dimmed. */
+    #opacity-pop {
+      position: fixed; top: 44px; left: 50%; transform: translateX(-50%); z-index: 21;
+      display: none; align-items: center; gap: 10px;
+      max-width: calc(100vw - 16px);
+      padding: 8px 12px; border-radius: 9px;
+      background: rgba(8, 10, 14, 0.92);
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.55);
+      color: #e5e7eb; font-size: 11px; white-space: nowrap;
+      --wails-draggable: no-drag;
+      -webkit-user-select: none; user-select: none;
+    }
+    #opacity-pop.open { display: flex; }
+    #opacity-pop label { color: #9ca3af; }
+    #opacity-pop output { min-width: 34px; text-align: right; font-variant-numeric: tabular-nums; }
+    #opacity-range {
+      -webkit-appearance: none; appearance: none; width: 140px; min-width: 0; height: 4px; margin: 0;
+      background: linear-gradient(to right, #facc15 var(--fill, 100%), #374151 var(--fill, 100%));
+      border-radius: 2px; outline: none; cursor: pointer;
+    }
+    #opacity-range::-webkit-slider-thumb {
+      -webkit-appearance: none; appearance: none;
+      width: 14px; height: 14px; border-radius: 50%;
+      background: #f5f5f4; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+    }
+    #opacity-range:focus-visible::-webkit-slider-thumb { outline: 2px solid #facc15; outline-offset: 2px; }
+
     /* Content area - 6px padding on all sides so resize handles aren't blocked by iframe */
     #content { position: absolute; inset: 6px; }
     iframe { display: block; width: 100%; height: 100%; border: none; }
+
+    /* Shape: a true circle on the shorter side of #content. `100%` in
+       clip-path is width-relative, so the vh/vw terms (minus the 6px gutter
+       each side) supply the height bound. Wings outside stay transparent. */
+    #content.circle {
+      --circle-d: min(100%, calc(100vh - 12px), calc(100vw - 12px));
+      clip-path: circle(calc(var(--circle-d) / 2) at 50% 50%);
+    }
+    #square-outline {
+      position: fixed; inset: 1px; z-index: 18; pointer-events: none;
+      border: 2px solid rgba(245, 245, 244, 0.7);
+      box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.8);
+    }
+    #resize-frame { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 18; pointer-events: none; }
+    #resize-frame[hidden], #square-outline[hidden] { display: none; }
+    #circle-outline { fill: none; stroke: rgba(245, 245, 244, 0.85); stroke-width: 2px; filter: drop-shadow(0 0 1px #000); }
+    #circle-resize { fill: none; stroke: rgba(255, 255, 255, 0.02); stroke-width: 16px; pointer-events: stroke; touch-action: none; cursor: ew-resize; outline: none; }
+    #resize-frame:has(#circle-resize:hover) #circle-outline,
+    #resize-frame:has(#circle-resize:focus-visible) #circle-outline,
+    body.resizing #circle-outline { stroke: #facc15; stroke-width: 3px; }
+    body.resizing { user-select: none; }
+
+    /* Map opacity applies to the tarkov.dev frame only (ADR-0001). The pill
+       and the loading panel are never dimmed. */
+    #map-frame { opacity: var(--map-opacity, 1); }
     #loading {
       position: absolute; inset: 0;
       display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -63,12 +125,19 @@
   <!-- Invisible drag area for moving the window -->
   <div id="titlebar-drag" data-wails-drag></div>
 
-  <!-- Minimal floating buttons: pin, minimize, close -->
+  <!-- Minimal floating buttons: pin, shape, opacity, minimize, close -->
   <div id="titlebar">
     <button id="pin-btn" class="tb-btn" title="Pin on top (overlay)" onclick="togglePin()">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
         <line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"/>
       </svg>
+    </button>
+    <button id="shape-btn" class="tb-btn" title="Shape: square (click for circle)" onclick="toggleShape()" aria-pressed="false">
+      <svg class="ico-square" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
+      <svg class="ico-circle" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="8.5"/></svg>
+    </button>
+    <button id="opacity-btn" class="tb-btn" title="Map opacity" onclick="toggleOpacity()" aria-expanded="false" aria-controls="opacity-pop">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5v17A8.5 8.5 0 0 0 12 3.5z" fill="currentColor" stroke="none"/></svg>
     </button>
     <button class="tb-btn" title="Minimize" onclick="window.runtime.WindowMinimise()">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -78,7 +147,24 @@
     </button>
   </div>
 
-  <!-- Map content (full window) -->
+  <!-- Opacity popover: live preview on drag, saved on release -->
+  <div id="opacity-pop" role="group" aria-label="Map opacity">
+    <label for="opacity-range">Map opacity</label>
+    <input id="opacity-range" type="range" min="20" max="100" step="5" value="100"
+           oninput="previewOpacity(this.valueAsNumber)" onchange="commitOpacity(this.valueAsNumber)">
+    <output id="opacity-out" for="opacity-range">100 %</output>
+  </div>
+
+  <div id="square-outline" aria-hidden="true"></div>
+  <svg id="resize-frame" hidden>
+    <circle id="circle-outline" aria-hidden="true"/>
+    <circle id="circle-resize" role="slider" tabindex="0" aria-label="Circular map size" aria-valuemin="188">
+      <title>Drag the circle edge to resize. Arrow keys adjust size.</title>
+    </circle>
+  </svg>
+
+  <!-- Map content (full window). Shape class and --map-opacity are applied
+       from the saved appearance on load. -->
   <div id="content">
     <div id="loading">
       <div class="spin"></div>
@@ -97,6 +183,244 @@
         console.error('Failed to toggle pin:', e);
       }
     }
+
+    // ---- Appearance ------------------------------------------------------
+    // `current` is what the UI shows; `confirmed` is the last value Go
+    // acknowledged. Every SetAppearance round-trips through Go's Normalize
+    // and we re-apply its answer, so the pill and the file can never
+    // disagree. If a save fails, the UI snaps back to `confirmed`. Responses
+    // are sequenced so a slow older reply can never overwrite a newer one.
+    let current = { shape: 'square', opacity: 100 };
+    let confirmed = current;
+    let seq = 0;
+    let saveQueue = Promise.resolve();
+    let opacityPreview = null;
+
+    function setControlsEnabled(on) {
+      for (const id of ['shape-btn', 'opacity-btn', 'opacity-range']) {
+        document.getElementById(id).disabled = !on;
+      }
+    }
+
+    // Apply an appearance: shape class on #content, opacity variable for the
+    // tarkov.dev frame only (ADR-0001), and the controls' visible state. The
+    // pill itself is never dimmed.
+    function applyAppearance(a) {
+      current = a;
+      const content = document.getElementById('content');
+      const circle = a.shape === 'circle';
+      content.classList.toggle('circle', circle);
+      document.getElementById('square-outline').hidden = circle;
+      document.getElementById('resize-frame').toggleAttribute('hidden', !circle);
+      const opacity = opacityPreview ?? a.opacity;
+      content.style.setProperty('--map-opacity', String(opacity / 100));
+
+      const shapeBtn = document.getElementById('shape-btn');
+      shapeBtn.classList.toggle('active', circle);
+      shapeBtn.setAttribute('aria-pressed', String(circle));
+      shapeBtn.title = circle ? 'Shape: circle (click for square)' : 'Shape: square (click for circle)';
+
+      setSlider(opacity);
+    }
+
+    const circleResize = document.getElementById('circle-resize');
+    let resizeDrag = null;
+    let resizePending = false;
+
+    function updateResizeFrame() {
+      const radius = Math.min(innerWidth, innerHeight) / 2 - 6;
+      for (const id of ['circle-outline', 'circle-resize']) {
+        const circle = document.getElementById(id);
+        circle.setAttribute('cx', innerWidth / 2);
+        circle.setAttribute('cy', innerHeight / 2);
+        circle.setAttribute('r', radius);
+      }
+      circleResize.setAttribute('aria-valuenow', Math.round(radius * 2));
+      circleResize.setAttribute('aria-valuemax', Math.max(Math.round(radius * 2), screen.availWidth, screen.availHeight));
+      circleResize.setAttribute('aria-valuetext', Math.round(radius * 2) + ' pixels across');
+    }
+    window.addEventListener('resize', updateResizeFrame);
+    updateResizeFrame();
+
+    async function driveResize(drag) {
+      if (drag.driving || !drag.bounds) return;
+      drag.driving = true;
+      try {
+        while (drag.sent !== drag.scale) {
+          const scale = drag.scale;
+          await window.go.main.MapWindowApp.ResizeCircle(drag.bounds, scale);
+          drag.sent = scale;
+        }
+      } catch (e) {
+        console.error('Failed to resize map:', e);
+        if (resizeDrag === drag) finishResize(false);
+        drag.done = true;
+      } finally {
+        drag.driving = false;
+        if (drag.done) resizePending = false;
+      }
+    }
+
+    function finishResize(cancel) {
+      const drag = resizeDrag;
+      if (!drag) return;
+      resizeDrag = null;
+      drag.done = true;
+      if (cancel) drag.scale = 1;
+      document.body.classList.remove('resizing');
+      if (circleResize.hasPointerCapture(drag.pointerId)) circleResize.releasePointerCapture(drag.pointerId);
+      driveResize(drag);
+    }
+
+    circleResize.addEventListener('pointerdown', async (e) => {
+      if (e.button !== 0 || resizePending) return;
+      e.preventDefault();
+      closeOpacity();
+      circleResize.setPointerCapture(e.pointerId);
+      const drag = {
+        pointerId: e.pointerId, centerX: e.screenX - e.clientX + innerWidth / 2,
+        centerY: e.screenY - e.clientY + innerHeight / 2,
+        radius: Math.hypot(e.clientX - innerWidth / 2, e.clientY - innerHeight / 2),
+        minSide: Math.min(innerWidth, innerHeight), scale: 1, sent: 1,
+        bounds: null, driving: false, done: false,
+      };
+      resizeDrag = drag;
+      resizePending = true;
+      document.body.classList.add('resizing');
+      try {
+        drag.bounds = await window.go.main.MapWindowApp.GetResizeBounds();
+        driveResize(drag);
+      } catch (error) {
+        console.error('Failed to read resize bounds:', error);
+        finishResize(false);
+        resizePending = false;
+      }
+    });
+    circleResize.addEventListener('pointermove', (e) => {
+      if (resizeDrag && e.pointerId === resizeDrag.pointerId) {
+        const drag = resizeDrag;
+        const radius = Math.hypot(e.screenX - drag.centerX, e.screenY - drag.centerY);
+        drag.scale = Math.max(200 / drag.minSide, 1 + 2 * (radius - drag.radius) / drag.minSide);
+        driveResize(drag);
+      } else {
+        const sector = Math.round(Math.atan2(e.clientY - innerHeight / 2, e.clientX - innerWidth / 2) / (Math.PI / 4));
+        circleResize.style.cursor = ['ew-resize', 'nwse-resize', 'ns-resize', 'nesw-resize'][(sector + 8) % 4];
+      }
+    });
+    circleResize.addEventListener('pointerup', () => finishResize(false));
+    circleResize.addEventListener('pointercancel', () => finishResize(false));
+    circleResize.addEventListener('lostpointercapture', () => finishResize(false));
+    circleResize.addEventListener('keydown', async (e) => {
+      const direction = { ArrowRight: 1, ArrowUp: 1, ArrowLeft: -1, ArrowDown: -1 }[e.key];
+      if (!direction || resizePending) return;
+      e.preventDefault();
+      resizePending = true;
+      const scale = Math.max(200, Math.min(innerWidth, innerHeight) + direction * (e.shiftKey ? 40 : 10)) / Math.min(innerWidth, innerHeight);
+      try {
+        const bounds = await window.go.main.MapWindowApp.GetResizeBounds();
+        await window.go.main.MapWindowApp.ResizeCircle(bounds, scale);
+      } catch (error) {
+        console.error('Failed to resize map:', error);
+      } finally {
+        resizePending = false;
+      }
+    });
+
+    function setSlider(v) {
+      const range = document.getElementById('opacity-range');
+      range.value = v;
+      range.style.setProperty('--fill', ((v - 20) / 80 * 100) + '%');
+      document.getElementById('opacity-out').textContent = v + ' %';
+    }
+
+    function persist(next) {
+      const mine = ++seq;
+      saveQueue = saveQueue.then(async () => {
+        try {
+          const saved = await window.go.main.MapWindowApp.SetAppearance(next, mine);
+          confirmed = saved;
+          if (mine === seq) applyAppearance(saved);
+        } catch (e) {
+          console.error('Failed to save appearance:', e);
+          if (mine === seq) applyAppearance(confirmed);
+        }
+      });
+    }
+
+    function toggleShape() {
+      const next = { shape: current.shape === 'circle' ? 'square' : 'circle', opacity: current.opacity };
+      applyAppearance(next); // optimistic; Go's answer replaces it
+      persist(next);
+    }
+
+    function toggleOpacity() {
+      const pop = document.getElementById('opacity-pop');
+      pop.classList.contains('open') ? closeOpacity() : openOpacity();
+    }
+    function openOpacity() {
+      document.getElementById('opacity-pop').classList.add('open');
+      const btn = document.getElementById('opacity-btn');
+      btn.classList.add('active'); btn.setAttribute('aria-expanded', 'true');
+      document.getElementById('opacity-range').focus();
+    }
+    function closeOpacity() {
+      document.getElementById('opacity-pop').classList.remove('open');
+      const btn = document.getElementById('opacity-btn');
+      btn.classList.remove('active'); btn.setAttribute('aria-expanded', 'false');
+      // Preview never updates `current`; snap the map back if the drag was cancelled.
+      opacityPreview = null;
+      applyAppearance(current);
+    }
+
+    // `input` fires continuously while dragging: preview only, no disk write.
+    function previewOpacity(v) {
+      opacityPreview = v;
+      document.getElementById('content').style.setProperty('--map-opacity', String(v / 100));
+      setSlider(v);
+    }
+    // `change` fires once on release: this is the save. Applied optimistically
+    // first so a shape toggle that races the save reads the new opacity.
+    function commitOpacity(v) {
+      opacityPreview = null;
+      const next = { shape: current.shape, opacity: v };
+      applyAppearance(next);
+      persist(next);
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') { finishResize(true); closeOpacity(); }
+    });
+    document.addEventListener('mousedown', (e) => {
+      if (!e.target.closest('#opacity-pop, #opacity-btn')) closeOpacity();
+    });
+    window.addEventListener('blur', () => {
+      setTimeout(() => {
+        if (document.activeElement === document.getElementById('map-frame')) closeOpacity();
+      }, 0);
+    });
+
+    // Reflect the restored pin state and appearance; the window may have
+    // opened already pinned, circular or dimmed. Appearance controls stay
+    // disabled until Go has answered, so a click cannot race the load.
+    setControlsEnabled(false);
+    (async () => {
+      try {
+        const pinned = await window.go.main.MapWindowApp.GetPinned();
+        document.getElementById('pin-btn').classList.toggle('pinned', pinned);
+      } catch (e) {
+        console.error('Failed to read pin state:', e);
+      }
+      try {
+        const a = await window.go.main.MapWindowApp.GetAppearance();
+        seq = a.sequence;
+        confirmed = a;
+        applyAppearance(a);
+      } catch (e) {
+        console.error('Failed to read appearance:', e);
+      } finally {
+        setControlsEnabled(true);
+      }
+    })();
   </script>
 </body>
 </html>

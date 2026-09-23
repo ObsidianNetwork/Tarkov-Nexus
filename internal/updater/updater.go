@@ -499,20 +499,7 @@ func (u *Updater) emit(event string, data interface{}) {
 	}
 }
 
-// GetAssetName returns the expected asset name for the current platform
+// GetAssetName returns the expected archive base name for the current platform.
 func GetAssetName() string {
-	platform := runtime.GOOS
-	arch := runtime.GOARCH
-
-	// Map platform/arch to expected asset names
-	switch platform {
-	case "windows":
-		return fmt.Sprintf("TarkovMapSync-windows-%s.exe", arch)
-	case "darwin":
-		return fmt.Sprintf("TarkovMapSync-darwin-%s", arch)
-	case "linux":
-		return fmt.Sprintf("TarkovMapSync-linux-%s", arch)
-	default:
-		return fmt.Sprintf("TarkovMapSync-%s-%s", platform, arch)
-	}
+	return fmt.Sprintf("Tarkov-Nexus_%s_%s", runtime.GOOS, runtime.GOARCH)
 }

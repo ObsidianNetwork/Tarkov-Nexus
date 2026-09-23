@@ -5,9 +5,11 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"runtime"
 	"testing"
 	"time"
 )
@@ -87,23 +89,31 @@ func TestGetFromList_ExactTag(t *testing.T) {
 }
 
 func TestPickUpdaterAsset(t *testing.T) {
-	// The updater-named asset is platform-specific; build the expected name
-	// from the same source of truth the picker uses (CI emits e.g.
-	// "Tarkov-Nexus_windows_amd64.zip" on the release workflow).
-	wantName := GetAssetName() + ".zip"
-	rel := &ghRelease{
-		TagName: "v3.4.0",
-		Assets: []ghAsset{
-			{Name: "TarkovNexus-v3.4.0-Windows-x64.zip"}, // user-facing zip must not be picked
-			{Name: wantName, BrowserDownloadURL: "https://example.com/updater.zip", Size: 123},
-		},
-	}
-	asset, err := pickUpdaterAsset(rel)
-	if err != nil {
-		t.Fatalf("pickUpdaterAsset error: %v", err)
-	}
-	if asset.Name != wantName {
-		t.Errorf("picked %q, want %q", asset.Name, wantName)
+	// Match the release workflow convention independently of GetAssetName.
+	wantName := fmt.Sprintf("Tarkov-Nexus_%s_%s.zip", runtime.GOOS, runtime.GOARCH)
+	for _, tag := range []string{"v3.3.4", "v3.3.4-beta.2"} {
+		t.Run(tag, func(t *testing.T) {
+			rel := &ghRelease{
+				TagName: tag,
+				Assets: []ghAsset{
+					{Name: fmt.Sprintf("TarkovNexus-%s-Windows-x64.zip", tag)},
+					{Name: "TarkovMapSync-windows-amd64.exe.zip"},
+					{Name: wantName + ".sha256"},
+					{Name: wantName, BrowserDownloadURL: "https://example.com/updater.zip", Size: 123},
+				},
+			}
+			asset, err := pickUpdaterAsset(rel)
+			if err != nil {
+				t.Fatalf("pickUpdaterAsset error: %v", err)
+			}
+			if asset.Name != wantName || asset.BrowserDownloadURL != "https://example.com/updater.zip" || asset.Size != 123 {
+				t.Errorf("picked unexpected asset: %+v", asset)
+			}
+			rel.Assets = rel.Assets[:len(rel.Assets)-1]
+			if _, err := pickUpdaterAsset(rel); err == nil {
+				t.Error("unrelated assets must not be used when the updater archive is missing")
+			}
+		})
 	}
 	if _, err := pickUpdaterAsset(&ghRelease{TagName: "v1.0.0"}); err == nil {
 		t.Error("missing asset should error")
