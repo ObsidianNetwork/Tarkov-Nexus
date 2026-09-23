@@ -56,10 +56,10 @@ func TestStore_SaveThenLoadRoundTrips(t *testing.T) {
 	}
 }
 
-func TestStore_SaveIsAtomic(t *testing.T) {
+func TestStore_SaveLeavesUnownedScratchFileUntouched(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "mapwindow.json")
-	// A stale temp file from a crashed earlier write must not break the save.
+	// A different process may still own the legacy scratch filename.
 	if err := os.WriteFile(path+".tmp", []byte("garbage"), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -67,16 +67,19 @@ func TestStore_SaveIsAtomic(t *testing.T) {
 	if err := s.Save(State{V: SchemaVersion, Pinned: true}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := os.Stat(path + ".tmp"); !os.IsNotExist(err) {
-		t.Fatalf("temp file left behind: %v", err)
+	if got, err := os.ReadFile(path + ".tmp"); err != nil || string(got) != "garbage" {
+		t.Fatalf("unowned scratch file changed: %q, %v", got, err)
 	}
-	entries, _ := os.ReadDir(dir)
-	if len(entries) != 1 || entries[0].Name() != "mapwindow.json" {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 2 || entries[0].Name() != "mapwindow.json" || entries[1].Name() != "mapwindow.json.tmp" {
 		names := make([]string, 0, len(entries))
 		for _, e := range entries {
 			names = append(names, e.Name())
 		}
-		t.Fatalf("directory should hold exactly mapwindow.json, got %v", names)
+		t.Fatalf("directory should hold only state and the unowned scratch file, got %v", names)
 	}
 }
 

@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 )
 
-// Store owns mapwindow.json. It is not safe for concurrent use; callers
-// serialise (the map window holds one mutex around Save).
+// Store persists whole mapwindow states. Independent stores may share a path;
+// their last successful replacement wins without merging individual fields.
 type Store struct {
 	path string
 }
@@ -38,10 +38,10 @@ func (s *Store) Load() (st State, ok bool) {
 	return st, true
 }
 
-// Save writes and syncs <path>.tmp before renaming it over the state file.
+// Save writes and syncs a unique sibling temporary file before replacing state.
 // It creates the directory if needed. Windows does not guarantee an atomic
 // rename or crash durability; Load falls back to defaults for unreadable state.
-func (s *Store) Save(st State) error {
+func (s *Store) Save(st State) (err error) {
 	st.V = SchemaVersion
 	data, err := json.MarshalIndent(st, "", "  ")
 	if err != nil {
@@ -50,22 +50,24 @@ func (s *Store) Save(st State) error {
 	if err := os.MkdirAll(filepath.Dir(s.path), 0o755); err != nil {
 		return err
 	}
-	tmp := s.path + ".tmp"
-	if err := writeSynced(tmp, data); err != nil {
-		return err
-	}
-	if err := os.Rename(tmp, s.path); err != nil {
-		return errors.Join(err, os.Remove(tmp))
-	}
-	return nil
-}
-
-// writeSynced writes data to path and syncs the file before closing it.
-func writeSynced(path string, data []byte) error {
-	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o644)
+	f, err := os.CreateTemp(filepath.Dir(s.path), filepath.Base(s.path)+".*.tmp")
 	if err != nil {
 		return err
 	}
+	tmp := f.Name()
+	defer func() {
+		if cleanupErr := os.Remove(tmp); !errors.Is(cleanupErr, os.ErrNotExist) {
+			err = errors.Join(err, cleanupErr)
+		}
+	}()
+	if err := writeSynced(f, data); err != nil {
+		return err
+	}
+	return os.Rename(tmp, s.path)
+}
+
+// writeSynced owns f, writes and syncs its contents, and always closes it.
+func writeSynced(f *os.File, data []byte) error {
 	if _, err := f.Write(data); err != nil {
 		return errors.Join(err, f.Close())
 	}

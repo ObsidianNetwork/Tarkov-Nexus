@@ -43,6 +43,7 @@ type Poller struct {
 	startOnce sync.Once
 	stopOnce  sync.Once
 	started   bool
+	ready     chan struct{}
 	stop      chan struct{}
 	done      chan struct{}
 }
@@ -58,16 +59,19 @@ func NewPoller(
 		read:  read,
 		write: write,
 		opts:  opts.withDefaults(),
+		ready: make(chan struct{}),
 		stop:  make(chan struct{}),
 		done:  make(chan struct{}),
 	}
 }
 
-// Start begins polling. Calling it more than once is a no-op.
+// Start captures the initial placement before returning, then polls for changes.
+// Calling it more than once is a no-op.
 func (p *Poller) Start() {
 	p.startOnce.Do(func() {
 		p.started = true
 		go p.loop()
+		<-p.ready
 	})
 }
 
@@ -88,13 +92,14 @@ func (p *Poller) Stop() {
 func (p *Poller) loop() {
 	defer close(p.done)
 
+	last, minimised, err := p.read()
+	haveLast := err == nil && !minimised && !last.IsZero() && !last.IsIconic()
 	var (
-		last     Rect
-		haveLast bool
 		pending  *Rect
 		debounce <-chan time.Time
 	)
 	tick := p.opts.After(p.opts.Interval)
+	close(p.ready)
 
 	for {
 		select {
