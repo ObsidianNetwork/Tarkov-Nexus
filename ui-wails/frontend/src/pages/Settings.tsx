@@ -32,6 +32,7 @@ import type { Config, UpdateInfo, UpdateStatus } from '../types';
 import { isDowngrade } from '../utils/version';
 import { Button, Input, Badge, Card } from '../components/ui';
 import { EventsOn } from '../../wailsjs/runtime/runtime';
+import { ReleaseNotesDialog } from '../features/release-notes/ReleaseNotesDialog';
 
 function Section({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) {
   return (
@@ -61,6 +62,7 @@ export function Settings() {
   const [betaVersions, setBetaVersions] = useState<updater.VersionOption[] | null>(null);
   const [selectedBeta, setSelectedBeta] = useState('');
   const [isInstallingBeta, setIsInstallingBeta] = useState(false);
+  const [releaseNotesOpen, setReleaseNotesOpen] = useState(false);
 
   useEffect(() => {
     loadConfig();
@@ -517,6 +519,12 @@ export function Settings() {
 
         {/* Updates */}
         <Section title="Updates" icon={<ArrowDownTrayIcon className="w-5 h-5" />}>
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <p className="text-sm text-text-secondary">Read the notes for your installed version.</p>
+            <Button onClick={() => setReleaseNotesOpen(true)} variant="secondary" className="min-h-11 text-text-primary">
+              Release Notes
+            </Button>
+          </div>
           {updateMessage && (
             <Badge variant={updateMessage.type === 'success' ? 'success' : updateMessage.type === 'error' ? 'error' : 'default'} glow>
               {updateMessage.type === 'success' ? <CheckCircleIcon className="w-4 h-4 mr-1" /> : updateMessage.type === 'error' ? <XCircleIcon className="w-4 h-4 mr-1" /> : <InformationCircleIcon className="w-4 h-4 mr-1" />}
@@ -644,6 +652,7 @@ export function Settings() {
         </Section>
       </div>
 
+      <ReleaseNotesDialog open={releaseNotesOpen} onClose={() => setReleaseNotesOpen(false)} />
     </div>
   );
 }

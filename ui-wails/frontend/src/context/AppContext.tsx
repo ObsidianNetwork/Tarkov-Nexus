@@ -1,32 +1,11 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
 import { EventsOn } from '../../wailsjs/runtime/runtime';
 import { GetStatus, IsRunning, GetUpdateStatus, DownloadUpdate, RestartApplication } from '../../wailsjs/go/main/App';
 import type { Status } from '../types';
 import { UpdateNotification } from '../components/UpdateNotification';
 
-interface UpdateInfo {
-  version: string;
-  releaseUrl: string;
-  releaseDate: string;
-  releaseName: string;
-  releaseBody: string;
-  assetUrl: string;
-  assetName: string;
-  assetSize: number;
-  isPrerelease: boolean;
-}
-
-interface UpdateStatus {
-  checking: boolean;
-  downloading: boolean;
-  installing: boolean;
-  updateAvailable: boolean;
-  currentVersion: string;
-  latestVersion: string;
-  downloadProgress: number;
-  error: string;
-  lastChecked: string;
-}
+import { parseUpdateStatus } from '../types/updater';
+import type { UpdateInfo, UpdateStatus } from '../types/updater';
 
 interface AppContextType {
   status: Status | null;
@@ -60,14 +39,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const refreshUpdateStatus = async () => {
+  const updateStatusRequest = useRef(0);
+  const refreshUpdateStatus = useCallback(async () => {
+    const request = ++updateStatusRequest.current;
     try {
       const status = await GetUpdateStatus();
-      setUpdateStatus(status as UpdateStatus);
+      const parsed = parseUpdateStatus(status);
+      if (request === updateStatusRequest.current && parsed) setUpdateStatus(parsed);
     } catch (err) {
       console.error('Failed to fetch update status:', err);
     }
-  };
+  }, []);
 
   const handleUpdate = async () => {
     if (!updateInfo) return;
@@ -133,6 +115,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     return () => {
       clearInterval(interval);
+      ++updateStatusRequest.current;
       // Cleanup event listeners (if EventsOff is available)
       cleanupFunctions.forEach(cleanup => {
         if (typeof cleanup === 'function') cleanup();

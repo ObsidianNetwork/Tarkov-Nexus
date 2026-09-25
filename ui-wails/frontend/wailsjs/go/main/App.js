@@ -158,6 +158,10 @@ export function GetQuestProgress() {
   return window['go']['main']['App']['GetQuestProgress']();
 }
 
+export function GetSavedReleaseNotes(arg1) {
+  return window['go']['main']['App']['GetSavedReleaseNotes'](arg1);
+}
+
 export function GetStatus() {
   return window['go']['main']['App']['GetStatus']();
 }
@@ -210,6 +214,10 @@ export function OpenMapWindow() {
   return window['go']['main']['App']['OpenMapWindow']();
 }
 
+export function OpenReleaseNotesLink(arg1) {
+  return window['go']['main']['App']['OpenReleaseNotesLink'](arg1);
+}
+
 export function OpenReleaseURL() {
   return window['go']['main']['App']['OpenReleaseURL']();
 }
@@ -220,6 +228,10 @@ export function OpenTarkovDevBrowser() {
 
 export function OpenURL(arg1) {
   return window['go']['main']['App']['OpenURL'](arg1);
+}
+
+export function RefreshReleaseNotes(arg1) {
+  return window['go']['main']['App']['RefreshReleaseNotes'](arg1);
 }
 
 export function RemoveFriend(arg1) {
