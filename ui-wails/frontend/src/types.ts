@@ -158,30 +158,7 @@ export interface PlayerInfo {
   gameEdition: string;
 }
 
-// Auto-Update Types
-export interface UpdateInfo {
-  version: string;
-  releaseUrl: string;
-  releaseDate: string;
-  releaseName: string;
-  releaseBody: string;
-  assetUrl: string;
-  assetName: string;
-  assetSize: number;
-  isPrerelease: boolean;
-}
-
-export interface UpdateStatus {
-  checking: boolean;
-  downloading: boolean;
-  installing: boolean;
-  updateAvailable: boolean;
-  currentVersion: string;
-  latestVersion: string;
-  downloadProgress: number;
-  error: string;
-  lastChecked: string;
-}
+export type { UpdateInfo, UpdateStatus } from './types/updater';
 
 // Party/Multiplayer Types
 export interface PartyStatus {

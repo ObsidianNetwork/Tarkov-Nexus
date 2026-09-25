@@ -11,51 +11,18 @@ The entries through v3.3.4 were reconstructed from the surviving release
 metadata and the private release/tag history. They are written as user-facing
 summaries rather than copied private commit messages.
 
-## [v3.4.0-beta.3] - 2026-09-23
-
-This is the first downloadable beta for 3.4.0. The beta.1 and beta.2 runs stopped before publishing binaries.
+## [v3.4.0] - 2026-09-25
 
 ### Added
 
 - Choose a square or circular map and adjust map opacity from 20% to 100% using the control pill. Drag the visible circle edge to resize, or use the clearer square border. Appearance is remembered between sessions.
 - The party map window remembers its position, size, and pinned state, with recovery when your monitor arrangement changes.
+- Read complete GitHub release notes inside Tarkov Nexus from update prompts and Settings, with formatted content, saved offline copies, retry controls, and links to the matching published release.
 
 ### Fixed
 
-- Fixed update downloads failing to find the Windows archive when switching release channels. If your current updater reports a missing Windows archive, install this beta manually from its ZIP once.
+- Fixed update downloads failing to find the Windows archive when switching release channels. If your current updater reports a missing Windows archive, install this release manually from its ZIP once.
 - Map adjustments made immediately after opening are saved, and simultaneous map windows no longer share a temporary state file.
-
-### Security
-
-- Updated the frontend router dependency to address published security advisories.
-
-## [v3.4.0-beta.2] - 2026-09-23
-
-This is the first downloadable beta for 3.4.0. The beta.1 packaging run stopped before publishing any binaries.
-
-### Added
-
-- Choose a square or circular map and adjust map opacity from 20% to 100% using the control pill. Drag the visible circle edge to resize, or use the clearer square border. Appearance is remembered between sessions.
-- The party map window remembers its position, size, and pinned state, with recovery when your monitor arrangement changes.
-
-### Fixed
-
-- Fixed update downloads failing to find the Windows archive when switching release channels. If your current updater reports a missing Windows archive, install this beta manually from its ZIP once.
-
-### Security
-
-- Updated the frontend router dependency to address published security advisories.
-
-## [v3.4.0-beta.1] - 2026-09-23
-
-### Added
-
-- Choose a square or circular map and adjust map opacity from 20% to 100% using the control pill. Drag the visible circle edge to resize, or use the clearer square border. Appearance is remembered between sessions.
-- The party map window remembers its position, size, and pinned state, with recovery when your monitor arrangement changes.
-
-### Fixed
-
-- Fixed update downloads failing to find the Windows archive when switching release channels. If your current updater reports a missing Windows archive, install this beta manually from its ZIP once.
 
 ### Security
 

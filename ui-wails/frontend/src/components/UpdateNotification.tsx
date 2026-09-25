@@ -1,4 +1,3 @@
-import React, { useState } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 import { Fragment } from 'react';
 import {
@@ -10,17 +9,10 @@ import {
 import { Button } from './ui';
 import { isDowngrade } from '../utils/version';
 
-interface UpdateInfo {
-  version: string;
-  releaseUrl: string;
-  releaseDate: string;
-  releaseName: string;
-  releaseBody: string;
-  assetUrl: string;
-  assetName: string;
-  assetSize: number;
-  isPrerelease: boolean;
-}
+import type { UpdateInfo } from '../types/updater';
+import { useReleaseNotes } from '../features/release-notes/useReleaseNotes';
+import { ReleaseNotesContent, ReleaseNotesMetadata } from '../features/release-notes/ReleaseNotesContent';
+import '../features/release-notes/release-notes.css';
 
 interface UpdateNotificationProps {
   isOpen: boolean;
@@ -49,7 +41,7 @@ export function UpdateNotification({
   error = '',
   currentVersion,
 }: UpdateNotificationProps) {
-  const [showReleaseNotes, setShowReleaseNotes] = useState(false);
+  const { state: notes, retry } = useReleaseNotes(isOpen && updateInfo !== null, updateInfo?.version ?? null, updateInfo);
 
   if (!updateInfo) return null;
 
@@ -62,18 +54,6 @@ export function UpdateNotification({
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
-  };
-
-  const formatDate = (dateStr: string) => {
-    try {
-      return new Date(dateStr).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      });
-    } catch {
-      return dateStr;
-    }
   };
 
   return (
@@ -91,7 +71,7 @@ export function UpdateNotification({
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" />
         </Transition.Child>
 
-        <div className="fixed inset-0 overflow-y-auto">
+        <div className="fixed inset-0">
           <div className="flex min-h-full items-center justify-center p-4">
             <Transition.Child
               as={Fragment}
@@ -102,19 +82,19 @@ export function UpdateNotification({
               leaveFrom="opacity-100 scale-100"
               leaveTo="opacity-0 scale-95"
             >
-              <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-bg-card border border-border-color shadow-2xl transition-all">
+              <Dialog.Panel className="release-notes-panel transform rounded-2xl bg-bg-card border border-border-color shadow-2xl">
                 {/* Header */}
-                <div className="relative bg-gradient-to-r from-primary-purple/20 to-electric-purple/10 px-6 py-4 border-b border-border-color">
+                <div className="relative shrink-0 bg-gradient-to-r from-primary-purple/20 to-electric-purple/10 p-4 sm:p-6 border-b border-border-color">
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
                       <div className="flex-shrink-0 w-10 h-10 rounded-full bg-primary-purple/20 flex items-center justify-center">
                         <ArrowDownTrayIcon className="w-5 h-5 text-primary-purple" />
                       </div>
                       <div>
-                        <Dialog.Title className="text-lg font-semibold text-text-primary">
+                        <Dialog.Title className="text-xl font-bold text-text-primary">
                           {downgrade ? 'Switch to Older Version' : 'Update Available'}
                         </Dialog.Title>
-                        <p className="text-sm text-text-muted">
+                        <p className="text-sm text-text-secondary">
                           Version {updateInfo.version}
                           {downgrade ? ' (downgrade from ' + currentVersion + ')' : ''}
                         </p>
@@ -122,71 +102,21 @@ export function UpdateNotification({
                     </div>
                     <button
                       onClick={onClose}
-                      className="text-text-muted hover:text-text-primary transition-colors"
+                      aria-label="Close update dialog"
+                      className="min-h-11 min-w-11 flex items-center justify-center text-text-secondary hover:text-text-primary transition-colors"
                       disabled={isDownloading || isInstalling}
                     >
                       <XMarkIcon className="w-5 h-5" />
                     </button>
                   </div>
+                  <ReleaseNotesMetadata state={notes} />
+                  {updateInfo.assetSize > 0 && <p className="mt-2 text-sm text-text-secondary">Download size: {formatFileSize(updateInfo.assetSize)}</p>}
                 </div>
 
-                {/* Content */}
-                <div className="px-6 py-4">
-                  {/* Release Info */}
-                  <div className="space-y-3 mb-4">
-                    {updateInfo.releaseName && (
-                      <div>
-                        <h3 className="text-sm font-medium text-text-secondary mb-1">
-                          Release Name
-                        </h3>
-                        <p className="text-sm text-text-primary">
-                          {updateInfo.releaseName}
-                        </p>
-                      </div>
-                    )}
-
-                    {updateInfo.releaseDate && (
-                      <div>
-                        <h3 className="text-sm font-medium text-text-secondary mb-1">
-                          Release Date
-                        </h3>
-                        <p className="text-sm text-text-primary">
-                          {formatDate(updateInfo.releaseDate)}
-                        </p>
-                      </div>
-                    )}
-
-                    {updateInfo.assetSize > 0 && (
-                      <div>
-                        <h3 className="text-sm font-medium text-text-secondary mb-1">
-                          Download Size
-                        </h3>
-                        <p className="text-sm text-text-primary">
-                          {formatFileSize(updateInfo.assetSize)}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Release Notes */}
-                  {updateInfo.releaseBody && (
-                    <div className="mb-4">
-                      <button
-                        onClick={() => setShowReleaseNotes(!showReleaseNotes)}
-                        className="text-sm font-medium text-primary-purple hover:text-electric-purple transition-colors mb-2"
-                      >
-                        {showReleaseNotes ? 'Hide' : 'Show'} Release Notes
-                      </button>
-                      {showReleaseNotes && (
-                        <div className="bg-bg-dark rounded-lg p-3 max-h-48 overflow-y-auto custom-scrollbar">
-                          <pre className="text-xs text-text-secondary whitespace-pre-wrap font-sans">
-                            {updateInfo.releaseBody}
-                          </pre>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
+                <div data-release-notes-scroll className="min-h-0 overflow-y-auto overscroll-contain custom-scrollbar bg-bg-darker p-4 sm:p-6">
+                  <ReleaseNotesContent state={notes} onRetry={retry} />
+                </div>
+                <div className="shrink-0 px-4 sm:px-6">
                   {/* Progress */}
                   {(isDownloading || isInstalling) && (
                     <div className="mb-4">
@@ -234,13 +164,13 @@ export function UpdateNotification({
                 </div>
 
                 {/* Actions */}
-                <div className="px-6 py-4 bg-bg-dark/50 border-t border-border-color flex gap-3">
+                <div className="shrink-0 p-4 sm:px-6 bg-bg-dark/50 border-t border-border-color flex gap-3">
                   {!isUpdateReady ? (
                     <>
                       <Button
                         variant="secondary"
                         onClick={onClose}
-                        className="flex-1"
+                        className="flex-1 min-h-11 text-text-primary"
                         disabled={isDownloading || isInstalling}
                       >
                         Skip
@@ -248,7 +178,7 @@ export function UpdateNotification({
                       <Button
                         variant="primary"
                         onClick={onUpdate}
-                        className="flex-1"
+                        className="flex-1 min-h-11 text-text-primary"
                         disabled={isDownloading || isInstalling}
                         loading={isDownloading || isInstalling}
                       >
@@ -266,7 +196,7 @@ export function UpdateNotification({
                       <Button
                         variant="secondary"
                         onClick={onClose}
-                        className="flex-1"
+                        className="flex-1 min-h-11 text-text-primary"
                       >
                         Restart Later
                       </Button>
@@ -274,7 +204,7 @@ export function UpdateNotification({
                         <Button
                           variant="primary"
                           onClick={onRestart}
-                          className="flex-1 bg-neon-green hover:bg-neon-green/90"
+                          className="flex-1 min-h-11 bg-neon-green hover:bg-neon-green/90"
                         >
                           Restart Now
                         </Button>

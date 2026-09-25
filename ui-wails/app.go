@@ -37,6 +37,7 @@ type App struct {
 	config           *config.Config
 	logger           *Logger
 	updater          *updater.Updater
+	releaseNotes     *updater.ReleaseNotes
 	updateChecker    *updater.BackgroundChecker
 	noticeFetcher    *notice.Fetcher
 	partyServer      *party.Server
@@ -46,7 +47,7 @@ type App struct {
 	partyMembers     []map[string]interface{} // Track party members when joined as client
 	stateMutex       sync.RWMutex
 	isRunning        bool
-	dataDir          string // AppData directory for config/logs
+	dataDir          string    // AppData directory for config/logs
 	mapWindowCmd     *exec.Cmd // Tracks the spawned map window process to prevent duplicates
 	mapWindowMu      sync.Mutex
 }
@@ -134,8 +135,9 @@ func (l *Logger) Error(msg string) {
 // dataDir is the directory for config.json and logs (typically %AppData%/TarkovNexus).
 func NewApp(dataDir string) *App {
 	return &App{
-		logger:  NewLogger(500), // Keep last 500 log entries
-		dataDir: dataDir,
+		logger:       NewLogger(500), // Keep last 500 log entries
+		dataDir:      dataDir,
+		releaseNotes: updater.NewReleaseNotes(updater.NewReleaseClient(updater.GitHubOwner, updater.GitHubRepo), dataDir, updater.Version),
 	}
 }
 
@@ -1383,6 +1385,9 @@ func (a *App) setupUpdateEventHandlers() {
 
 	// Forward updater events to Wails events
 	a.updater.OnEvent("update:available", func(data interface{}) {
+		if info, ok := data.(*updater.UpdateInfo); ok {
+			a.rememberOfferedRelease(info)
+		}
 		a.emitEvent("update:available", data)
 	})
 

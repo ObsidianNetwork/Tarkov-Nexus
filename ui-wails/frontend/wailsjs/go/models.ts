@@ -206,7 +206,92 @@ export namespace notice {
 }
 
 export namespace updater {
+
+	export class ReleaseNote {
+	    tag: string;
+	    name: string;
+	    body: string;
+	    // Go type: time
+	    publishedAt?: any;
+	    releaseUrl: string;
+	    // Go type: time
+	    fetchedAt: any;
+
+	    static createFrom(source: any = {}) {
+	        return new ReleaseNote(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.tag = source["tag"];
+	        this.name = source["name"];
+	        this.body = source["body"];
+	        this.publishedAt = this.convertValues(source["publishedAt"], null);
+	        this.releaseUrl = source["releaseUrl"];
+	        this.fetchedAt = this.convertValues(source["fetchedAt"], null);
+	    }
 	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class ReleaseNotesResult {
+	    version: string;
+	    tag: string;
+	    lookup: string;
+	    note?: ReleaseNote;
+	    saved: boolean;
+	    releaseUrl: string;
+	    // Go type: time
+	    retryAt?: any;
+
+	    static createFrom(source: any = {}) {
+	        return new ReleaseNotesResult(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.version = source["version"];
+	        this.tag = source["tag"];
+	        this.lookup = source["lookup"];
+	        this.note = this.convertValues(source["note"], ReleaseNote);
+	        this.saved = source["saved"];
+	        this.releaseUrl = source["releaseUrl"];
+	        this.retryAt = this.convertValues(source["retryAt"], null);
+	    }
+
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
 	export class UpdateInfo {
 	    version: string;
 	    releaseUrl: string;

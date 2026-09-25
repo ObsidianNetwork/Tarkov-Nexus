@@ -3,6 +3,7 @@ package updater
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -55,8 +56,22 @@ func NewReleaseClient(owner, repo string) *ReleaseClient {
 		owner:      owner,
 		repo:       repo,
 		baseURL:    defaultAPIBaseURL,
-		httpClient: &http.Client{Timeout: requestTimeout},
+		httpClient: &http.Client{Timeout: requestTimeout, CheckRedirect: sameOriginRedirect},
 	}
+}
+
+func sameOriginRedirect(req *http.Request, via []*http.Request) error {
+	if len(via) == 0 {
+		return nil
+	}
+	if len(via) >= 10 {
+		return errors.New("release API stopped after 10 redirects")
+	}
+	origin := via[0].URL
+	if req.URL.Scheme != origin.Scheme || req.URL.Host != origin.Host {
+		return errors.New("release API redirect changed origin")
+	}
+	return nil
 }
 
 // ErrNoReleaseFound is returned when no release matches the channel rules.

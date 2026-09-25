@@ -1,0 +1,52 @@
+.release-notes-panel {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 680px;
+  max-height: calc(100dvh - 48px);
+  overflow: clip;
+  text-align: left;
+}
+
+.release-notes-panel p {
+  line-height: 1.65;
+}
+
+.release-notes-markdown {
+  @apply text-base text-text-primary;
+  line-height: 1.65;
+  overflow-wrap: break-word;
+  word-break: auto-phrase;
+}
+
+.release-notes-markdown :is([lang="ja"], [lang="zh"]) {
+  overflow-wrap: break-word;
+  word-break: keep-all;
+}
+
+.release-notes-markdown > * + * { margin-top: 16px; }
+.release-notes-markdown :is(h1, h2, h3, h4, h5, h6) { @apply font-bold; margin-top: 24px; line-height: 1.4; }
+.release-notes-markdown > :first-child { margin-top: 0; }
+.release-notes-markdown h1 { @apply text-2xl; }
+.release-notes-markdown h2 { @apply text-xl; }
+.release-notes-markdown :is(h3, h4, h5, h6) { @apply text-lg; }
+.release-notes-markdown :is(ul, ol) { padding-left: 24px; }
+.release-notes-markdown ul { list-style: disc; }
+.release-notes-markdown ol { list-style: decimal; }
+.release-notes-markdown li + li { margin-top: 8px; }
+.release-notes-markdown li > p + p { margin-top: 12px; }
+.release-notes-markdown blockquote { @apply border-l-2 border-primary-purple text-text-secondary; padding-left: 16px; }
+.release-notes-markdown :is(code, kbd) { @apply rounded bg-bg-card font-mono text-sm; padding: 2px 4px; }
+.release-notes-markdown pre { @apply rounded-lg border border-border-color bg-bg-card; padding: 16px; overflow-x: auto; }
+.release-notes-markdown pre code { padding: 0; white-space: pre; }
+.release-notes-markdown img { display: block; max-width: 100%; height: auto; border-radius: 8px; }
+.release-notes-markdown hr { @apply border-border-color; margin-block: 24px; }
+.release-notes-table { max-width: 100%; overflow-x: auto; }
+.release-notes-markdown table { border-collapse: collapse; min-width: 100%; overflow-wrap: normal; word-break: normal; }
+.release-notes-markdown :is(th, td) { @apply border border-border-color; padding: 8px 12px; }
+.release-notes-markdown th { @apply bg-bg-card font-semibold; }
+.release-notes-markdown summary { cursor: pointer; }
+.release-notes-markdown input { margin-right: 8px; }
+
+.release-notes-markdown :focus-visible { @apply outline outline-2 outline-primary-purple; outline-offset: 4px; }
+.release-notes-markdown .footnotes { @apply border-t border-border-color text-sm; margin-top: 24px; padding-top: 16px; }

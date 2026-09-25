@@ -83,6 +83,8 @@ export function GetPublicIP():Promise<string>;
 
 export function GetQuestProgress():Promise<any>;
 
+export function GetSavedReleaseNotes(arg1:string):Promise<updater.ReleaseNotesResult>;
+
 export function GetStatus():Promise<Record<string, any>>;
 
 export function GetUpdateStatus():Promise<Record<string, any>>;
@@ -109,11 +111,15 @@ export function ListBetaVersions():Promise<Array<updater.VersionOption>>;
 
 export function OpenMapWindow():Promise<void>;
 
+export function OpenReleaseNotesLink(arg1:string):Promise<void>;
+
 export function OpenReleaseURL():Promise<void>;
 
 export function OpenTarkovDevBrowser():Promise<void>;
 
 export function OpenURL(arg1:string):Promise<void>;
+
+export function RefreshReleaseNotes(arg1:string):Promise<updater.ReleaseNotesResult>;
 
 export function RemoveFriend(arg1:string):Promise<void>;
 
