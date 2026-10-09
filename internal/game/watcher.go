@@ -41,6 +41,7 @@ type Profile struct {
 type Watcher struct {
 	logsPath        string
 	configLogsPath  string // Configured logs path from config
+	currentLogFolder string
 	mapResolver     *maps.Resolver
 	currentProfile  Profile
 	raidInfo        RaidInfo
@@ -52,6 +53,7 @@ type Watcher struct {
 	eventHandlers   map[string][]func(interface{})
 	handlerMutex    sync.RWMutex
 	watcherMutex    sync.Mutex
+	raidInfoMutex   sync.RWMutex
 	logger          logger.Logger
 }
 
@@ -88,19 +90,60 @@ func (gw *Watcher) Start() error {
 
 	latestLogFolder, err := gw.getLatestLogFolder()
 	if err != nil {
-		return fmt.Errorf("failed to find latest log folder: %w", err)
+		gw.logger.Warning(fmt.Sprintf("Could not find an EFT log session yet: %v", err))
+		go gw.watchLatestLogFolderLoop()
+		return nil
 	}
 
 	// If no log folder found, skip log monitoring but don't fail
 	if latestLogFolder == "" {
 		gw.logger.Info(fmt.Sprintf("📋 Log monitoring disabled - logs directory not found"))
 		gw.logger.Info(fmt.Sprintf("    Screenshot position tracking will still work"))
+		go gw.watchLatestLogFolderLoop()
 		return nil
 	}
 
 	gw.logger.Info(fmt.Sprintf("📋 Watching logs in: %s", latestLogFolder))
 
-	return gw.watchLogsFolder(latestLogFolder)
+	if err := gw.watchLogsFolder(latestLogFolder); err != nil {
+		return err
+	}
+	gw.watcherMutex.Lock()
+	gw.currentLogFolder = latestLogFolder
+	gw.watcherMutex.Unlock()
+	go gw.watchLatestLogFolderLoop()
+	return nil
+}
+
+func (gw *Watcher) watchLatestLogFolderLoop() {
+	ticker := time.NewTicker(20 * time.Second)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-gw.ctx.Done():
+			return
+		case <-ticker.C:
+			if err := gw.watchLatestLogFolder(); err != nil {
+				gw.logger.Warning(fmt.Sprintf("Could not refresh EFT log session: %v", err))
+			}
+		}
+	}
+}
+
+func (gw *Watcher) watchLatestLogFolder() error {
+	folder, err := gw.getLatestLogFolder()
+	if err != nil || folder == "" {
+		return err
+	}
+	gw.watcherMutex.Lock()
+	changed := folder != gw.currentLogFolder
+	gw.currentLogFolder = folder
+	gw.watcherMutex.Unlock()
+	if changed {
+		gw.logger.Info(fmt.Sprintf("Detected new EFT log session: %s", folder))
+	}
+	// Rescan the current session too; EFT can create the files after the folder.
+	return gw.watchLogsFolder(folder)
 }
 
 // Stop stops all log monitoring
@@ -140,9 +183,12 @@ func (gw *Watcher) getDefaultLogsFolder() (string, error) {
 		return "", fmt.Errorf("EFT is only supported on Windows")
 	}
 
+	var registryLogsPath string
+
 	// Try Windows Registry detection first (like JavaScript implementation)
 	if registryPath := gw.getEFTPathFromRegistry(); registryPath != "" {
 		logsPath := filepath.Join(registryPath, "Logs")
+		registryLogsPath = logsPath
 		if _, err := os.Stat(logsPath); err == nil {
 			gw.logger.Debug(fmt.Sprintf("📋 Found EFT logs via Windows Registry: %s", logsPath))
 			return logsPath, nil
@@ -183,6 +229,12 @@ func (gw *Watcher) getDefaultLogsFolder() (string, error) {
 			gw.logger.Debug(fmt.Sprintf("📋 Found EFT logs directory: %s", logPath))
 			return logPath, nil
 		}
+	}
+	if registryLogsPath != "" {
+		// The game may not have written its first log folder yet. Keep watching
+		// the installation's expected Logs directory so startup before EFT works.
+		gw.logger.Info(fmt.Sprintf("Waiting for EFT logs at: %s", registryLogsPath))
+		return registryLogsPath, nil
 	}
 
 	// If we can't find logs, warn but don't fail - maybe user is only using screenshots
@@ -260,6 +312,22 @@ func (gw *Watcher) getLatestLogFolder() (string, error) {
 	return filepath.Join(gw.logsPath, logFolders[0].name), nil
 }
 
+// isRecentLogSession distinguishes the live Tarkov session from an older
+// session already present when Nexus starts. Replaying a recent session lets
+// Nexus detect a raid that began before its log watcher attached, while old
+// sessions remain fail-closed.
+func isRecentLogSession(folder string) bool {
+	name := filepath.Base(folder)
+	pattern := regexp.MustCompile(`log_(\d{4})\.(\d{2})\.(\d{2})_(\d{1,2})-(\d{2})-(\d{2})`)
+	matches := pattern.FindStringSubmatch(name)
+	if len(matches) != 7 {
+		return false
+	}
+	sessionTime := time.Date(parseInt(matches[1]), time.Month(parseInt(matches[2])), parseInt(matches[3]), parseInt(matches[4]), parseInt(matches[5]), parseInt(matches[6]), 0, time.Local)
+	age := time.Since(sessionTime)
+	return age >= -5*time.Minute && age <= 2*time.Hour
+}
+
 // watchLogsFolder starts monitoring all log files in the given folder
 func (gw *Watcher) watchLogsFolder(folderPath string) error {
 	entries, err := os.ReadDir(folderPath)
@@ -318,6 +386,11 @@ func (gw *Watcher) watchLogsFolder(folderPath string) error {
 				type_ string
 			}{filename, "notifications"})
 			gw.logger.Debug(fmt.Sprintf("📋 Found notifications log: %s", filename))
+		} else if strings.Contains(filenameLower, "output") && strings.HasSuffix(filenameLower, ".log") {
+			logFiles = append(logFiles, struct {
+				file string
+				type_ string
+			}{filename, "output"})
 		} else if strings.Contains(filenameLower, "app") && strings.HasSuffix(filenameLower, ".log") && !strings.Contains(filenameLower, "application") {
 			// Fallback: look for "app*.log" files (new format might use "app.log")
 			logFiles = append(logFiles, struct {
@@ -327,6 +400,10 @@ func (gw *Watcher) watchLogsFolder(folderPath string) error {
 			gw.logger.Debug(fmt.Sprintf("📋 Found application log (alternative pattern): %s", filename))
 		}
 	}
+
+	sort.SliceStable(logFiles, func(a, b int) bool {
+		return logFiles[a].type_ == "output" && logFiles[b].type_ != "output"
+	})
 
 	if len(logFiles) == 0 {
 		gw.logger.Warning(fmt.Sprintf("⚠️  No log files found in %s", folderPath))
@@ -350,6 +427,13 @@ func (gw *Watcher) watchLogsFolder(folderPath string) error {
 
 // startLogFileWatcher starts monitoring a specific log file using polling (like JavaScript)
 func (gw *Watcher) startLogFileWatcher(logPath, logType string) error {
+	gw.watcherMutex.Lock()
+	if gw.pollingActive[logPath] {
+		gw.watcherMutex.Unlock()
+		return nil
+	}
+	gw.pollingActive[logPath] = true
+	gw.watcherMutex.Unlock()
 	gw.logger.Debug(fmt.Sprintf("📋 Starting %s monitor at %s", logType, logPath))
 
 	// For non-application logs, start from end of file for live monitoring
@@ -361,17 +445,28 @@ func (gw *Watcher) startLogFileWatcher(logPath, logType string) error {
 		}
 	}
 
+	if logType == "output" && isRecentLogSession(filepath.Dir(logPath)) {
+		if data, err := os.ReadFile(logPath); err == nil && strings.Contains(string(data), "Session.OnDisconnect") {
+			gw.processLogEvent("Session.OnDisconnect", time.Now(), false)
+		}
+	}
+
 	// Read existing content first (only for application logs)
 	if logType == "application" {
-		if err := gw.processExistingLogContent(logPath, logType); err != nil {
+		initialRead := !isRecentLogSession(filepath.Dir(logPath))
+		if err := gw.processExistingLogContent(logPath, logType, initialRead); err != nil {
 			gw.logger.Error(fmt.Sprintf("Failed to process existing log content: %v", err))
+			if stat, statErr := os.Stat(logPath); statErr == nil {
+				initialPosition = stat.Size()
+			}
 		}
 	}
 
 	// Set initial file position (thread-safe)
 	gw.watcherMutex.Lock()
-	gw.filePositions[logPath] = initialPosition
-	gw.pollingActive[logPath] = true
+	if logType != "application" || gw.filePositions[logPath] == 0 {
+		gw.filePositions[logPath] = initialPosition
+	}
 	gw.watcherMutex.Unlock()
 
 	// Start polling-based monitoring (like JavaScript does every 5 seconds)
@@ -381,7 +476,7 @@ func (gw *Watcher) startLogFileWatcher(logPath, logType string) error {
 }
 
 // processExistingLogContent reads and processes existing log content
-func (gw *Watcher) processExistingLogContent(logPath, logType string) error {
+func (gw *Watcher) processExistingLogContent(logPath, logType string, initialRead bool) error {
 	file, err := os.Open(logPath)
 	if err != nil {
 		return err
@@ -416,11 +511,14 @@ func (gw *Watcher) processExistingLogContent(logPath, logType string) error {
 			gw.logger.Warning(fmt.Sprintf("📋 Processing old log file (age: %.1f hours) - map state may be outdated", logAge.Hours()))
 		}
 
-		gw.handleNewLogData(logPath, logType, content.String(), true)
+		gw.handleNewLogData(logPath, logType, content.String(), initialRead)
 
 		// If this is an old log and we detected a raid, warn that it might be outdated
-		if isOldLog && gw.raidInfo.Map != "" {
-			gw.logger.Warning(fmt.Sprintf("⚠️  Detected old raid state from logs: %s", gw.raidInfo.Map))
+		gw.raidInfoMutex.RLock()
+		oldRaidMap := gw.raidInfo.Map
+		gw.raidInfoMutex.RUnlock()
+		if isOldLog && oldRaidMap != "" {
+			gw.logger.Warning(fmt.Sprintf("⚠️  Detected old raid state from logs: %s", oldRaidMap))
 			gw.logger.Warning(fmt.Sprintf("    This may not reflect current game state. Start a new raid to update."))
 		}
 	}
@@ -523,6 +621,11 @@ func (gw *Watcher) handleNewLogData(logPath, logType, data string, initialRead b
 		"data":        data,
 		"initialRead": initialRead,
 	})
+	// The Python reference tool detects Session.OnDisconnect by searching the
+	// raw output-log chunk, whose line format differs from application.log.
+	if logType == "output" && !initialRead && strings.Contains(data, "Session.OnDisconnect") {
+		gw.processLogEvent("Session.OnDisconnect", time.Now(), false)
+	}
 
 	gw.parseLogData(data, initialRead)
 }
@@ -609,6 +712,8 @@ func (gw *Watcher) processQuestNotifications(data string, initialRead bool) {
 
 // processLogEvent processes a single log event
 func (gw *Watcher) processLogEvent(eventLine string, eventTime time.Time, initialRead bool) {
+	gw.raidInfoMutex.Lock()
+	defer gw.raidInfoMutex.Unlock()
 	// Debug: Log interesting events
 	if strings.Contains(eventLine, "application|") &&
 		(strings.Contains(eventLine, "LocationLoaded") ||
@@ -680,6 +785,17 @@ func (gw *Watcher) processLogEvent(eventLine string, eventTime time.Time, initia
 		if !strings.Contains(eventLine, "SelectProfile") {
 			return
 		}
+	}
+	if strings.Contains(eventLine, "PrepareSelectedProfileLocally") || strings.Contains(eventLine, "Session.OnDisconnect") {
+		if gw.raidInfo.StartedTime != nil && gw.raidInfo.EndedTime == nil {
+			gw.raidInfo.EndedTime = &eventTime
+			gw.emit("raidEnded", map[string]interface{}{
+				"raidInfo": gw.raidInfo,
+				"profile":  gw.currentProfile,
+			})
+		}
+		gw.raidInfo = RaidInfo{ProfileType: gw.currentProfile.Type}
+		return
 	}
 
 	// Scene preset path - can be used as fallback for map detection
@@ -848,11 +964,15 @@ func (gw *Watcher) emit(event string, data interface{}) {
 
 // GetCurrentMap returns the current map
 func (gw *Watcher) GetCurrentMap() string {
+	gw.raidInfoMutex.RLock()
+	defer gw.raidInfoMutex.RUnlock()
 	return gw.raidInfo.Map
 }
 
 // GetRaidInfo returns a copy of the current raid info
 func (gw *Watcher) GetRaidInfo() RaidInfo {
+	gw.raidInfoMutex.RLock()
+	defer gw.raidInfoMutex.RUnlock()
 	return gw.raidInfo
 }
 

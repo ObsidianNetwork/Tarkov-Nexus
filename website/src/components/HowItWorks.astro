@@ -13,7 +13,7 @@ const steps = [
   {
     number: 3,
     title: "Play",
-    description: "Load into a raid and take a screenshot (default: PrintScreen)"
+    description: "Take a screenshot manually, or enable automatic screenshots in Settings and match your Tarkov screenshot key."
   },
   {
     number: 4,
@@ -45,7 +45,7 @@ const steps = [
         <strong>How does it work?</strong>
       </p>
       <p class="explanation-text">
-        When you take a screenshot in Escape from Tarkov, the game embeds your coordinates in the filename. Tarkov Nexus watches for new screenshots and pushes those coordinates to the live tarkov.dev map, whether you're running Customs, Woods, Shoreline, Lighthouse, Reserve, Streets, Interchange, Factory, Labs, or Ground Zero.
+        Tarkov itself creates each screenshot and embeds your coordinates in its filename. Automatic screenshots are disabled by default and can be enabled at your discretion in Settings. When enabled, Tarkov Nexus sends your configured screenshot key at an interval while the game is focused and a raid is detected from its logs. You can also take screenshots manually. Nexus watches for the resulting files and sends their coordinates to the live tarkov.dev map, whether you're running Customs, Woods, Shoreline, Lighthouse, Reserve, Streets, Interchange, Factory, Labs, or Ground Zero.
       </p>
     </div>
   </div>

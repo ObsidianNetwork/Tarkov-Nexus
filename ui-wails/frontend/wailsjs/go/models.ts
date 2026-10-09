@@ -69,6 +69,9 @@ export namespace config {
 	export class Config {
 	    remoteId: string;
 	    screenshotDir: string;
+	    autoScreenshotEnabled: boolean;
+	    screenshotKey: number;
+	    screenshotIntervalSeconds: number;
 	    logsDir: string;
 	    autoConnect: boolean;
 	    autoProcessExisting: boolean;
@@ -94,6 +97,9 @@ export namespace config {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.remoteId = source["remoteId"];
 	        this.screenshotDir = source["screenshotDir"];
+	        this.autoScreenshotEnabled = source["autoScreenshotEnabled"];
+	        this.screenshotKey = source["screenshotKey"];
+	        this.screenshotIntervalSeconds = source["screenshotIntervalSeconds"];
 	        this.logsDir = source["logsDir"];
 	        this.autoConnect = source["autoConnect"];
 	        this.autoProcessExisting = source["autoProcessExisting"];

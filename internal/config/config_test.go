@@ -96,6 +96,22 @@ func TestLoadConfigAllowsEmptyRemoteID(t *testing.T) {
 	}
 }
 
+func TestLoadConfigDefaultsAutomaticScreenshotSettingsWithoutEnabling(t *testing.T) {
+	dir := t.TempDir()
+	path := writeConfig(t, dir, `{"screenshotDir":"`+filepath.ToSlash(dir)+`"}`)
+
+	cfg, err := LoadConfig(path)
+	if err != nil {
+		t.Fatalf("LoadConfig returned error: %v", err)
+	}
+	if cfg.AutoScreenshot {
+		t.Fatal("automatic screenshots enabled for a config that omitted the setting")
+	}
+	if cfg.ScreenshotKey != 44 || cfg.ScreenshotInterval != 5 {
+		t.Fatalf("screenshot defaults = key %d, interval %d; want key 44, interval 5", cfg.ScreenshotKey, cfg.ScreenshotInterval)
+	}
+}
+
 func TestLoadConfigMissingFileIsError(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "config.json")
 

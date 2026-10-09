@@ -301,8 +301,13 @@ func (a *App) GetDataDir() string {
 
 // SaveConfig saves the configuration to disk
 func (a *App) SaveConfig(cfg *config.Config) error {
+	if cfg == nil {
+		return fmt.Errorf("configuration is required")
+	}
+	cfg.NormalizeAutoScreenshotSettings()
 	a.stateMutex.Lock()
 	a.config = cfg
+	integrationInstance := a.integration
 	a.stateMutex.Unlock()
 
 	// Save configuration to config.json in the data directory
@@ -316,6 +321,9 @@ func (a *App) SaveConfig(cfg *config.Config) error {
 	if err := os.WriteFile(cfgPath, data, 0644); err != nil {
 		a.logError(fmt.Sprintf("Failed to write config file: %v", err))
 		return err
+	}
+	if integrationInstance != nil {
+		integrationInstance.UpdateAutoScreenshotSettings(cfg)
 	}
 
 	a.logInfo("Configuration saved successfully")
@@ -626,6 +634,12 @@ func (a *App) GetStatus() map[string]interface{} {
 			"isMonitoring":   false,
 			"processedCount": 0,
 			"pendingCount":   0,
+		}
+		status["autoScreenshot"] = map[string]interface{}{
+			"enabled":         a.config.AutoScreenshot,
+			"state":           "inactive",
+			"intervalSeconds": a.config.ScreenshotInterval,
+			"keyCode":         a.config.ScreenshotKey,
 		}
 		status["websocket"] = map[string]interface{}{
 			"totalReconnects":  0,

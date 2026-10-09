@@ -495,6 +495,25 @@ export function Dashboard() {
               { label: 'Pending', value: status?.screenshot?.pendingCount?.toString() || '0' },
             ]}
           />
+
+          <InfoPanel
+            title="Automatic Screenshots"
+            items={[
+              {
+                label: 'State',
+                value: status?.autoScreenshot?.state?.replace(/_/g, ' ') || 'disabled',
+                status: status?.autoScreenshot?.state === 'error' ? 'error' : status?.autoScreenshot?.enabled ? 'success' : undefined,
+              },
+              { label: 'Interval', value: `${status?.autoScreenshot?.intervalSeconds || 5}s` },
+              {
+                label: 'Last key sent',
+                value: status?.autoScreenshot?.lastKeySent && !status.autoScreenshot.lastKeySent.startsWith('0001-')
+                  ? formatTimestamp(status.autoScreenshot.lastKeySent)
+                  : 'Never',
+              },
+              ...(status?.autoScreenshot?.error ? [{ label: 'Issue', value: status.autoScreenshot.error }] : []),
+            ]}
+          />
         </div>
       )}
 

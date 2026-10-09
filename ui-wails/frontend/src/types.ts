@@ -3,6 +3,9 @@
 export interface Config {
   remoteId: string;
   screenshotDir: string;
+  autoScreenshotEnabled: boolean;
+  screenshotKey: number;
+  screenshotIntervalSeconds: number;
   logsDir: string;
   autoConnect: boolean;
   autoProcessExisting: boolean;
@@ -55,6 +58,14 @@ export interface Status {
     isMonitoring: boolean;
     processedCount: number;
     pendingCount: number;
+  };
+  autoScreenshot: {
+    enabled: boolean;
+    state: string;
+    lastKeySent?: string;
+    error?: string;
+    intervalSeconds: number;
+    keyCode: number;
   };
   websocket: {
     totalReconnects: number;

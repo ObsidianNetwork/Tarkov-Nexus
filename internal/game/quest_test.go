@@ -2,7 +2,60 @@ package game
 
 import (
 	"testing"
+	"time"
+
+	"tarkov-screenshot-analyzer/internal/logger"
 )
+
+type discardLogger struct{}
+
+func (discardLogger) Debug(string)   {}
+func (discardLogger) Info(string)    {}
+func (discardLogger) Warning(string) {}
+func (discardLogger) Error(string)   {}
+
+func TestRaidStateFailsClosedOnInitialReadAndTracksLiveTransitions(t *testing.T) {
+	var log logger.Logger = discardLogger{}
+	watcher := NewWatcher(log)
+	startedAt := time.Date(2026, 10, 9, 12, 0, 0, 0, time.UTC)
+
+	// Old GameStarted lines are deliberately ignored during initial log replay.
+	watcher.processLogEvent("application|GameStarted", startedAt, true)
+	if got := watcher.GetRaidInfo(); got.StartedTime != nil {
+		t.Fatal("initial log replay incorrectly restored an old active raid")
+	}
+
+	watcher.processLogEvent("application|GameStarted", startedAt, false)
+	if got := watcher.GetRaidInfo(); got.StartedTime == nil || got.EndedTime != nil {
+		t.Fatalf("live GameStarted did not mark raid active: %+v", got)
+	}
+
+	endedAt := startedAt.Add(time.Minute)
+	watcher.processLogEvent("Got notification | UserMatchOver", endedAt, false)
+	if got := watcher.GetRaidInfo(); got.StartedTime != nil || got.EndedTime != nil {
+		t.Fatalf("raid exit did not clear active raid state: %+v", got)
+	}
+
+	watcher.processLogEvent("application|GameStarted", endedAt, false)
+	watcher.processLogEvent("SelectProfile ProfileId:player123", endedAt.Add(time.Minute), false)
+	if got := watcher.GetRaidInfo(); got.StartedTime == nil || got.EndedTime == nil {
+		t.Fatalf("live profile selection did not mark raid ended: %+v", got)
+	}
+
+	// These lifecycle signals are observed in logs even when the usual match-end
+	// notification is missing, so they must also fail closed for automation.
+	watcher.processLogEvent("application|GameStarted", endedAt.Add(2*time.Minute), false)
+	watcher.processLogEvent("application|Session.OnDisconnect", endedAt.Add(3*time.Minute), false)
+	if got := watcher.GetRaidInfo(); got.StartedTime != nil {
+		t.Fatalf("Session.OnDisconnect left raid state active: %+v", got)
+	}
+
+	watcher.processLogEvent("application|GameStarted", endedAt.Add(4*time.Minute), false)
+	watcher.processLogEvent("application|PrepareSelectedProfileLocally", endedAt.Add(5*time.Minute), false)
+	if got := watcher.GetRaidInfo(); got.StartedTime != nil {
+		t.Fatalf("PrepareSelectedProfileLocally left raid state active: %+v", got)
+	}
+}
 
 func TestIsQuestNotification(t *testing.T) {
 	testCases := []struct {
