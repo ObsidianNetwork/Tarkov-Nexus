@@ -32,6 +32,7 @@ func NewMapResolver() *MapResolver {
 			{NameID: "shoreline", NormalizedName: "shoreline", DisplayName: "Shoreline"},
 			{NameID: "interchange", NormalizedName: "interchange", DisplayName: "Interchange"},
 			{NameID: "rezervbase", NormalizedName: "reserve", DisplayName: "Reserve"},
+			{NameID: "rezerv_base", NormalizedName: "reserve", DisplayName: "Reserve"},
 			{NameID: "reserve", NormalizedName: "reserve", DisplayName: "Reserve"},
 			{NameID: "lighthouse", NormalizedName: "lighthouse", DisplayName: "Lighthouse"},
 			{NameID: "tarkovstreets", NormalizedName: "streets-of-tarkov", DisplayName: "Streets of Tarkov"},
