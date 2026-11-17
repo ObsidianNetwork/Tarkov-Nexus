@@ -1,0 +1,116 @@
+---
+// Pinned scroll tour: the section is several viewports tall, its inner stage
+// sticks, and scroll progress turns the screenshots around a cylinder.
+// Without scripting or with reduced motion it is a plain stacked list
+// (see "Tour" in global.css and DESIGN.md §3).
+const baseUrl = import.meta.env.BASE_URL;
+
+const stops = [
+  {
+    src: 'screens/dashboard.png',
+    width: 1278,
+    height: 798,
+    alt: 'Tarkov Nexus dashboard with Start Integration and Open Map actions above current map, connection uptime, screenshots processed, and last update',
+    title: 'One screen to start tracking',
+    body: 'Start the integration, open the map, and check the current map, connection uptime, and how many screenshots have been processed.'
+  },
+  {
+    src: 'screens/overlay-square.png',
+    width: 488,
+    height: 488,
+    alt: 'Map overlay window showing the Customs map with extracts, spawns, and raid duration and player count',
+    title: 'The live map in its own window',
+    body: 'The tarkov.dev map opens in a compact window with extracts, markers, and raid info in the corner. Pin it and keep it next to the game.'
+  },
+  {
+    src: 'screens/party.png',
+    width: 1278,
+    height: 798,
+    alt: 'Party screen with a display name field and a Connect to Server button',
+    title: 'Bring your squad',
+    body: 'Pick a display name, connect to the party server, then create or join a party to share positions in real time.'
+  }
+];
+
+const pad = (n: number) => String(n).padStart(2, '0');
+---
+
+<section class="tour" id="tour" style={`--stops: ${stops.length}`}>
+  <div class="tour-sticky">
+    <div class="container tour-inner">
+      <div class="section-header tour-header">
+        <span class="eyebrow">Inside the app</span>
+        <h2>See it before you install it</h2>
+      </div>
+      <ol class="tour-list">
+        {stops.map((stop, i) => (
+          <li class:list={['tour-stop', { 'is-active': i === 0 }]} style={`--i: ${i}`}>
+            <div class="tour-copy">
+              <span class="tour-index">{pad(i + 1)}</span>
+              <h3>{stop.title}</h3>
+              <p>{stop.body}</p>
+            </div>
+            <figure class="tour-panel">
+              <img
+                src={`${baseUrl}${stop.src}`}
+                alt={stop.alt}
+                width={stop.width}
+                height={stop.height}
+                decoding="async"
+              />
+            </figure>
+          </li>
+        ))}
+      </ol>
+      <div class="tour-progress" aria-hidden="true">
+        <span class="tour-count">{pad(1)} / {pad(stops.length)}</span>
+        <span class="tour-rail"><span class="tour-rail-fill"></span></span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  const tour = document.querySelector<HTMLElement>('.tour');
+
+  if (tour && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    const stops = [...tour.querySelectorAll<HTMLElement>('.tour-stop')];
+    const count = tour.querySelector<HTMLElement>('.tour-count');
+    const last = stops.length - 1;
+    const pad = (n: number) => String(n).padStart(2, '0');
+    // Smootherstep: each screenshot settles and holds before the next turns in.
+    const ease = (t: number) => t * t * t * (t * (t * 6 - 15) + 10);
+    let active = 0;
+    let queued = false;
+
+    const update = () => {
+      queued = false;
+      const travel = tour.offsetHeight - window.innerHeight;
+      const scrolled = travel > 0 ? -tour.getBoundingClientRect().top / travel : 0;
+      const raw = Math.min(Math.max(scrolled, 0), 1) * last;
+      const whole = Math.floor(raw);
+      const position = Math.min(whole + ease(raw - whole), last);
+
+      tour.style.setProperty('--p', position.toFixed(4));
+      tour.style.setProperty('--progress', (raw / last).toFixed(4));
+
+      const next = Math.round(position);
+      if (next !== active) {
+        stops[active].classList.remove('is-active');
+        stops[next].classList.add('is-active');
+        active = next;
+        if (count) count.textContent = `${pad(next + 1)} / ${pad(stops.length)}`;
+      }
+    };
+
+    const schedule = () => {
+      if (queued) return;
+      queued = true;
+      requestAnimationFrame(update);
+    };
+
+    window.addEventListener('scroll', schedule, { passive: true });
+    window.addEventListener('resize', schedule);
+    update();
+  }
+</script>

@@ -777,6 +777,309 @@ header {
 }
 
 /* --------------------------------------------------------------------------
+   Tour — pinned scroll sequence (DESIGN.md §3)
+   Base rules are the static stacked list. The pinned 3D version is layered
+   on only when scripting runs and motion is allowed.
+   -------------------------------------------------------------------------- */
+
+.tour {
+  padding: 7rem 0;
+}
+
+.tour-header {
+  margin-bottom: 3rem;
+}
+
+.tour-list {
+  list-style: none;
+  display: grid;
+  gap: 5rem;
+}
+
+.tour-stop {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 8fr);
+  gap: 3rem;
+  align-items: center;
+}
+
+.tour-index {
+  display: block;
+  margin-bottom: 0.75rem;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--neon-green);
+}
+
+.tour-copy h3 {
+  font-family: var(--font-display);
+  font-size: clamp(1.4rem, 2.4vw, 1.9rem);
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+  margin-bottom: 0.85rem;
+}
+
+.tour-copy p {
+  color: var(--text-secondary);
+  font-size: 1.05rem;
+  max-width: 44ch;
+  text-wrap: pretty;
+}
+
+.tour-panel {
+  display: flex;
+  justify-content: center;
+}
+
+/* drop-shadow follows the PNG's transparent rounded corners; box-shadow would not. */
+.tour-panel img {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  height: auto;
+  max-height: min(58svh, 560px);
+  filter: drop-shadow(0 28px 36px rgba(3, 5, 10, 0.75));
+}
+
+.tour-progress {
+  display: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html.js .tour {
+    height: calc(var(--stops) * 100svh);
+    padding: 0;
+    /* Cylinder radius the screenshots turn around. */
+    --r: clamp(380px, 55vw, 860px);
+  }
+
+  html.js .tour-sticky {
+    position: sticky;
+    top: 0;
+    height: 100svh;
+    padding-top: 4.5rem;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+  }
+
+  html.js .tour-inner {
+    width: 100%;
+  }
+
+  html.js .tour-header {
+    margin-bottom: 2rem;
+  }
+
+  html.js .tour-list {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 8fr);
+    gap: 0 3rem;
+    align-items: center;
+  }
+
+  /* Stops dissolve so every copy block shares one cell and every panel another. */
+  html.js .tour-stop {
+    display: contents;
+  }
+
+  html.js .tour-copy {
+    grid-area: 1 / 1;
+    position: relative;
+    z-index: 1;
+    opacity: 0;
+    transform: translateY(12px);
+    pointer-events: none;
+    transition: opacity var(--t-slow) var(--ease-out), transform var(--t-slow) var(--ease-out);
+  }
+
+  html.js .tour-stop.is-active .tour-copy {
+    opacity: 1;
+    transform: none;
+    pointer-events: auto;
+  }
+
+  /* --d is this panel's distance from the centred slot; --p comes from Tour.astro. */
+  html.js .tour-panel {
+    grid-area: 1 / 2;
+    --d: calc(var(--i) - var(--p, 0));
+    /* The incoming panel (right) stays faintly visible; the outgoing one (left)
+       fades out fast because it sweeps across the copy column. */
+    --fade: max(calc(var(--d) * var(--peek, 0.85)), calc(var(--d) * -1.8));
+    transform:
+      perspective(1500px)
+      translateZ(calc(var(--r) * -1))
+      rotateY(calc(var(--d) * 40deg))
+      translateZ(var(--r));
+    opacity: clamp(0, calc(1 - var(--fade)), 1);
+    will-change: transform, opacity;
+  }
+
+  html.js .tour-progress {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 2rem;
+  }
+
+  .tour-count {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-muted);
+  }
+
+  .tour-rail {
+    width: 9rem;
+    height: 2px;
+    background: var(--border-color);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+  }
+
+  .tour-rail-fill {
+    display: block;
+    height: 100%;
+    background: var(--neon-green);
+    transform: scaleX(var(--progress, 0));
+    transform-origin: left;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Showcase — gallery of the remaining screens
+   -------------------------------------------------------------------------- */
+
+.showcase {
+  padding: 7rem 0;
+}
+
+.showcase-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.5rem;
+}
+
+.shot {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+}
+
+.shot--wide {
+  grid-column: span 2;
+}
+
+.shot-media {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background: var(--bg-dark);
+}
+
+.shot-media img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  filter: drop-shadow(0 16px 24px rgba(3, 5, 10, 0.7));
+}
+
+.shot figcaption {
+  padding: 1.5rem 2rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.shot h3 {
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin-bottom: 0.35rem;
+}
+
+.shot p {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  text-wrap: pretty;
+}
+
+@media (max-width: 1024px) {
+  .tour-stop {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+
+  .tour-panel {
+    order: -1;
+  }
+
+  .tour-panel img {
+    max-height: 40svh;
+  }
+
+  .showcase-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .shot--wide {
+    grid-column: auto;
+  }
+}
+
+@media (max-width: 1024px) and (prefers-reduced-motion: no-preference) {
+  html.js .tour-list {
+    grid-template-columns: 1fr;
+    gap: 1.5rem 0;
+  }
+
+  /* The radius is small here, so a peeking next panel would cover the current one. */
+  html.js .tour-panel {
+    grid-area: 1 / 1;
+    --peek: 1;
+  }
+
+  html.js .tour-copy {
+    grid-area: 2 / 1;
+  }
+
+  html.js .tour-header {
+    margin-bottom: 1.25rem;
+  }
+
+  html.js .tour-progress {
+    margin-top: 1.25rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .tour,
+  .showcase {
+    padding: 4rem 0;
+  }
+
+  html.js .tour {
+    padding: 0;
+  }
+
+  .shot-media {
+    padding: 1.25rem;
+  }
+
+  .shot figcaption {
+    padding: 1.25rem;
+  }
+}
+
+/* --------------------------------------------------------------------------
    Footer
    -------------------------------------------------------------------------- */
 
