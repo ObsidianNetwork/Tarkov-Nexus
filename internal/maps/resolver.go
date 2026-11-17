@@ -29,6 +29,7 @@ func NewResolver() *Resolver {
 			{NameID: "shoreline", NormalizedName: "shoreline", Name: "Shoreline"},
 			{NameID: "interchange", NormalizedName: "interchange", Name: "Interchange"},
 			{NameID: "rezervbase", NormalizedName: "reserve", Name: "Reserve"},
+			{NameID: "rezerv_base", NormalizedName: "reserve", Name: "Reserve"},
 			{NameID: "reserve", NormalizedName: "reserve", Name: "Reserve"},
 			{NameID: "lighthouse", NormalizedName: "lighthouse", Name: "Lighthouse"},
 			{NameID: "tarkovstreets", NormalizedName: "streets-of-tarkov", Name: "Streets of Tarkov"},
