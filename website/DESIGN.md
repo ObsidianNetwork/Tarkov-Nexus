@@ -70,6 +70,10 @@ Shadows are tinted (purple-black, never pure black):
 - GPU-composited only: `transform`, `opacity`, `filter`
 - Scroll reveal: `.reveal` starts `opacity:0; translateY(20px)`, becomes
   visible via IntersectionObserver; stagger with `--reveal-delay` in `ms`
+- Scroll-linked motion (Tour): one script writes a unitless `--p` (stop
+  position) and `--progress` (0-1) onto the section inside
+  `requestAnimationFrame`; CSS derives every transform and opacity from them.
+  No animation library.
 - Every animated element honors `prefers-reduced-motion: reduce` (no
   animation, final state immediately)
 
@@ -93,6 +97,20 @@ Shadows are tinted (purple-black, never pure black):
 
 - Container: `max-width: 1200px`, `padding-inline: 1.5rem`.
 - Hero: `min-height: 100svh` (never `100vh`), 2-col grid collapsing at 1024px.
+- Tour (`#tour`, directly after the hero): the section is one viewport tall
+  per stop and its stage is `position: sticky`. Copy sits in the left 5fr
+  column and the screenshots in the right 8fr column, all stacked in one grid
+  cell and turned around a vertical cylinder (40deg per stop) by scroll
+  position. The incoming screenshot stays faintly visible on the right; the
+  outgoing one fades fast because it crosses the copy column. Below 1024px the
+  screenshot sits above the copy and the incoming peek is hidden. Without
+  scripting or with reduced motion it is a plain stacked list of rows. Only
+  the main screens go here; a stop needs a title and one sentence.
+- Showcase (`#showcase`, after How it works): the remaining screens as
+  `.shot` cards in a 3-column grid, wide shots spanning 2; 1 column at 1024px.
+- Screenshots live in `public/screens/` as PNGs with the window edge cropped
+  and the outside of the window shape transparent. Shadow them with
+  `filter: drop-shadow`, never `box-shadow`, so the shadow follows the shape.
 - Features: **bento grid** — Real-Time Position, Party System, and Quest
   Tracking span 2 columns each, filling three full rows; collapses to 2-col
   (1024px, wides span full width) then 1-col (640px).
