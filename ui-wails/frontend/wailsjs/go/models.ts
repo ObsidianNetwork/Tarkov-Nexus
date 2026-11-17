@@ -206,7 +206,7 @@ export namespace notice {
 }
 
 export namespace updater {
-
+	
 	export class ReleaseNote {
 	    tag: string;
 	    name: string;
@@ -216,11 +216,11 @@ export namespace updater {
 	    releaseUrl: string;
 	    // Go type: time
 	    fetchedAt: any;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new ReleaseNote(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.tag = source["tag"];
@@ -258,11 +258,11 @@ export namespace updater {
 	    releaseUrl: string;
 	    // Go type: time
 	    retryAt?: any;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new ReleaseNotesResult(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.version = source["version"];
@@ -273,7 +273,7 @@ export namespace updater {
 	        this.releaseUrl = source["releaseUrl"];
 	        this.retryAt = this.convertValues(source["retryAt"], null);
 	    }
-
+	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
 		    if (!a) {
 		        return a;
