@@ -11,6 +11,12 @@ The entries through v3.3.4 were reconstructed from the surviving release
 metadata and the private release/tag history. They are written as user-facing
 summaries rather than copied private commit messages.
 
+## [v3.4.1] - 2026-11-17
+
+### Fixed
+
+- Fixed automatic Reserve map detection when entering a raid.
+
 ## [v3.4.0] - 2026-09-25
 
 ### Added
