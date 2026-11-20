@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"tarkov-screenshot-analyzer/internal/autoscreenshot"
 	"tarkov-screenshot-analyzer/internal/config"
 	"tarkov-screenshot-analyzer/internal/game"
 	"tarkov-screenshot-analyzer/internal/logger"
@@ -29,6 +30,7 @@ type Integration struct {
 	screenshotMonitor *monitor.ScreenshotMonitor
 	positionDetector  *position.Detector
 	gameWatcher       *game.Watcher
+	autoScreenshot    *autoscreenshot.Controller
 	questTracker      *tracker.QuestTracker
 	mapResolver       *game.MapResolver
 
@@ -108,6 +110,13 @@ func (i *Integration) Initialize() error {
 
 	// Initialize game watcher
 	i.gameWatcher = game.NewWatcher(i.logger)
+	i.autoScreenshot = autoscreenshot.New(*i.config, autoscreenshot.NewPlatformDriver(), func() bool {
+		if i.gameWatcher == nil {
+			return false
+		}
+		runtime := i.gameWatcher.GetRaidInfo()
+		return runtime.StartedTime != nil && runtime.EndedTime == nil
+	}, i.logger)
 
 	// Set logs path if configured
 	if i.config.LogsDir != "" {
@@ -143,6 +152,7 @@ func (i *Integration) Initialize() error {
 	if err := i.screenshotMonitor.StartMonitoring(); err != nil {
 		return fmt.Errorf("failed to start screenshot monitoring: %w", err)
 	}
+	i.autoScreenshot.Start(i.ctx)
 
 	// Process existing files if enabled
 	if i.config.AutoProcessExisting {
@@ -560,6 +570,7 @@ func (i *Integration) GetStatus() map[string]interface{} {
 	var connected bool
 	var monitoring bool
 	var screenshotStatus map[string]interface{}
+	var autoScreenshotStatus interface{}
 	var wsStats map[string]interface{}
 	var questStats map[string]interface{}
 	if i.wsClient != nil {
@@ -573,6 +584,16 @@ func (i *Integration) GetStatus() map[string]interface{} {
 	if i.questTracker != nil {
 		questStats = i.questTracker.GetStats()
 	}
+	if i.autoScreenshot != nil {
+		autoScreenshotStatus = i.autoScreenshot.Status()
+	} else {
+		autoScreenshotStatus = map[string]interface{}{
+			"enabled":         i.config.AutoScreenshot,
+			"state":           autoscreenshot.StateDisabled,
+			"intervalSeconds": i.config.ScreenshotInterval,
+			"keyCode":         i.config.ScreenshotKey,
+		}
+	}
 
 	return map[string]interface{}{
 		"initialized":          i.isInitialized,
@@ -585,6 +606,7 @@ func (i *Integration) GetStatus() map[string]interface{} {
 		"lastPosition":         i.lastPosition,
 		"lastUpdate":           lastUpdateStr,
 		"screenshot":           screenshotStatus,
+		"autoScreenshot":       autoScreenshotStatus,
 		"websocket":            wsStats,
 		"questTracking":        questStats,
 		"config": map[string]interface{}{
@@ -594,6 +616,15 @@ func (i *Integration) GetStatus() map[string]interface{} {
 			"questTrackingConfigured": i.config.IsQuestTrackingConfigured(),
 		},
 	}
+}
+
+// UpdateAutoScreenshotSettings refreshes the live controller after settings
+// are saved while integration is running.
+func (i *Integration) UpdateAutoScreenshotSettings(cfg *config.Config) {
+	if i.autoScreenshot == nil || cfg == nil {
+		return
+	}
+	i.autoScreenshot.UpdateConfig(*cfg)
 }
 
 // SetManualMapOverride sets a manual map selection for when logs are unavailable
@@ -805,6 +836,9 @@ func (h *partyEventHandler) OnDisconnected() {
 func (i *Integration) Shutdown() error {
 	i.logger.Info("🛑 Shutting down integration...")
 
+	if i.autoScreenshot != nil {
+		i.autoScreenshot.Stop()
+	}
 	i.screenshotMonitor.StopMonitoring()
 	i.wsClient.Disconnect()
 	i.gameWatcher.Stop()

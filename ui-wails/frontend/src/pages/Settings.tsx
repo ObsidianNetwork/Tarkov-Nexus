@@ -34,6 +34,24 @@ import { Button, Input, Badge, Card } from '../components/ui';
 import { EventsOn } from '../../wailsjs/runtime/runtime';
 import { ReleaseNotesDialog } from '../features/release-notes/ReleaseNotesDialog';
 
+function virtualKeyLabel(code: number) {
+  if ((code >= 65 && code <= 90) || (code >= 48 && code <= 57)) return String.fromCharCode(code);
+  if (code >= 112 && code <= 135) return `F${code - 111}`;
+  const names: Record<number, string> = {
+    8: 'Backspace', 9: 'Tab', 13: 'Enter', 20: 'Caps Lock', 27: 'Escape',
+    32: 'Space', 33: 'Page Up', 34: 'Page Down', 35: 'End', 36: 'Home',
+    37: 'Left Arrow', 38: 'Up Arrow', 39: 'Right Arrow', 40: 'Down Arrow',
+    44: 'Print Screen', 45: 'Insert', 46: 'Delete', 106: 'Numpad *',
+    107: 'Numpad +', 109: 'Numpad -', 110: 'Numpad .', 111: 'Numpad /',
+  };
+  if (code >= 96 && code <= 105) return `Numpad ${code - 96}`;
+  return names[code] || `Key ${code}`;
+}
+
+function isModifierKey(code: number) {
+  return [16, 17, 18, 91, 92, 160, 161, 162, 163, 164, 165].includes(code);
+}
+
 function Section({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) {
   return (
     <div className="glass-card glass-card-static p-6 rounded-xl">
@@ -63,6 +81,8 @@ export function Settings() {
   const [selectedBeta, setSelectedBeta] = useState('');
   const [isInstallingBeta, setIsInstallingBeta] = useState(false);
   const [releaseNotesOpen, setReleaseNotesOpen] = useState(false);
+  const [capturingScreenshotKey, setCapturingScreenshotKey] = useState(false);
+  const [screenshotKeyMessage, setScreenshotKeyMessage] = useState('');
 
   useEffect(() => {
     loadConfig();
@@ -86,6 +106,24 @@ export function Settings() {
 
     return () => { cleanupFunctions.forEach(cleanup => cleanup()); };
   }, []);
+
+  useEffect(() => {
+    if (!capturingScreenshotKey) return;
+    const captureKey = (event: KeyboardEvent) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const code = event.keyCode;
+      if (code <= 0 || code > 255 || isModifierKey(code) || event.shiftKey || event.altKey || event.ctrlKey || event.metaKey) {
+        setScreenshotKeyMessage('Choose a single non-modifier key without Shift, Ctrl, Alt, or Windows.');
+        return;
+      }
+      setConfig((current) => current ? { ...current, screenshotKey: code } : current);
+      setScreenshotKeyMessage(`Screenshot key set to ${virtualKeyLabel(code)}. Save settings to apply it.`);
+      setCapturingScreenshotKey(false);
+    };
+    window.addEventListener('keydown', captureKey, true);
+    return () => window.removeEventListener('keydown', captureKey, true);
+  }, [capturingScreenshotKey]);
 
   const loadConfig = async () => {
     try {
@@ -411,6 +449,67 @@ export function Settings() {
               Process existing screenshots on start
             </span>
           </label>
+        </Section>
+
+        {/* Automatic In-Game Screenshots */}
+        <Section title="Automatic In-Game Screenshots" icon={<InformationCircleIcon className="w-5 h-5" />}>
+          <label className="flex items-center cursor-pointer group">
+            <input
+              type="checkbox"
+              checked={config.autoScreenshotEnabled}
+              onChange={(e) => {
+                setConfig({ ...config, autoScreenshotEnabled: e.target.checked });
+                if (!e.target.checked) setCapturingScreenshotKey(false);
+              }}
+              className="w-4 h-4 text-primary-purple bg-bg-card border-border-color rounded focus:ring-2 focus:ring-primary-purple/50"
+            />
+            <span className="ml-3 text-text-secondary group-hover:text-text-primary transition-colors">
+              Automatically take in-game screenshots during raids
+            </span>
+          </label>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-text-secondary mb-2">Tarkov Screenshot Key</label>
+              <div className="flex items-center gap-2">
+                <span className="glass-input flex-1 px-4 py-2" aria-live="polite">
+                  {capturingScreenshotKey ? 'Press a key…' : virtualKeyLabel(config.screenshotKey || 44)}
+                </span>
+                <Button
+                  onClick={() => {
+                    if (capturingScreenshotKey) {
+                      setCapturingScreenshotKey(false);
+                      setScreenshotKeyMessage('Key selection cancelled.');
+                    } else {
+                      setScreenshotKeyMessage('Press the key bound to Screenshot in Tarkov.');
+                      setCapturingScreenshotKey(true);
+                    }
+                  }}
+                  disabled={!config.autoScreenshotEnabled}
+                  variant="secondary"
+                  size="sm"
+                >
+                  {capturingScreenshotKey ? 'Cancel' : 'Set key'}
+                </Button>
+              </div>
+              {screenshotKeyMessage && <p className="text-xs text-text-muted mt-1">{screenshotKeyMessage}</p>}
+              <p className="text-xs text-text-muted mt-1">This must match Tarkov’s in-game Screenshot binding. Nexus sends a normal key press only while Tarkov is focused.</p>
+            </div>
+            <Input
+              label="Screenshot interval (seconds)"
+              type="number"
+              min={1}
+              max={300}
+              disabled={!config.autoScreenshotEnabled}
+              value={config.screenshotIntervalSeconds || 5}
+              onChange={(e) => {
+                const value = Number.parseInt(e.target.value, 10);
+                if (Number.isFinite(value)) setConfig({ ...config, screenshotIntervalSeconds: Math.max(1, Math.min(300, value)) });
+              }}
+              helperText="1–300 seconds. Captures wait for a detected active raid and start after one full interval."
+            />
+          </div>
+          <p className="text-xs text-text-muted">Automatic screenshots are disabled by default. They run only during a raid confirmed from Tarkov logs, and only while Tarkov is the foreground window. Save settings; if integration is running, the new values apply immediately.</p>
         </Section>
 
         {/* Quest Tracking */}

@@ -15,6 +15,9 @@ import (
 type Config struct {
 	RemoteID                 string           `json:"remoteId"`
 	ScreenshotDir            string           `json:"screenshotDir"`
+	AutoScreenshot           bool             `json:"autoScreenshotEnabled"`
+	ScreenshotKey            int              `json:"screenshotKey"`
+	ScreenshotInterval       int              `json:"screenshotIntervalSeconds"`
 	LogsDir                  string           `json:"logsDir"`
 	AutoConnect              bool             `json:"autoConnect"`
 	AutoProcessExisting      bool             `json:"autoProcessExisting"`
@@ -69,6 +72,9 @@ func DefaultConfig() *Config {
 	return &Config{
 		AutoConnect:              false,
 		AutoProcessExisting:      false,
+		AutoScreenshot:           false,
+		ScreenshotKey:            44, // VK_SNAPSHOT (Print Screen)
+		ScreenshotInterval:       5,
 		PositionUpdateThrottleMs: 1000,
 		EnableQuestTracking:      false,
 		TarkovTrackerURL:         "https://tarkovtracker.org/api/v2",
@@ -119,6 +125,7 @@ func LoadConfig(configPath string) (*Config, error) {
 	if err := json.Unmarshal(data, config); err != nil {
 		return nil, fmt.Errorf("failed to parse config file: %w", err)
 	}
+	config.NormalizeAutoScreenshotSettings()
 	fmt.Printf("Loaded configuration from %s\n", configPath)
 
 	if remoteID := os.Getenv("TARKOV_REMOTE_ID"); remoteID != "" {
@@ -155,6 +162,29 @@ func LoadConfig(configPath string) (*Config, error) {
 	}
 
 	return config, nil
+}
+
+// NormalizeAutoScreenshotSettings fills defaults for newly added fields and
+// keeps persisted values within the supported key and interval ranges.
+func (c *Config) NormalizeAutoScreenshotSettings() {
+	if c == nil {
+		return
+	}
+	if c.ScreenshotKey <= 0 || c.ScreenshotKey > 255 || isModifierVirtualKey(c.ScreenshotKey) {
+		c.ScreenshotKey = 44 // VK_SNAPSHOT (Print Screen)
+	}
+	if c.ScreenshotInterval < 1 || c.ScreenshotInterval > 300 {
+		c.ScreenshotInterval = 5
+	}
+}
+
+func isModifierVirtualKey(key int) bool {
+	switch key {
+	case 16, 17, 18, 91, 92, 160, 161, 162, 163, 164, 165:
+		return true
+	default:
+		return false
+	}
 }
 
 func getDefaultScreenshotDir() (string, error) {
