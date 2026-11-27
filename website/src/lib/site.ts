@@ -9,8 +9,8 @@ export interface Author {
 }
 
 export const AUTHORS: Author[] = [
-  { name: 'uBlue', login: 'ImStillBlue', role: 'Creator' },
-  { name: 'Jordan', login: 'Jordanmuss99', role: 'Co-developer' }
+  { name: 'Jordan', login: 'Jordanmuss99', role: 'Creator' },
+  { name: 'uBlue', login: 'ImStillBlue', role: 'Creator' }
 ];
 
 export const githubProfile = (login: string) => `https://github.com/${login}`;
