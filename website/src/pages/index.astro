@@ -2,13 +2,23 @@
 import Layout from '../layouts/Layout.astro';
 import Header from '../components/Header.astro';
 import Hero from '../components/Hero.astro';
+import Tour from '../components/Tour.astro';
 import Features from '../components/Features.astro';
 import HowItWorks from '../components/HowItWorks.astro';
+import Showcase from '../components/Showcase.astro';
 import Download from '../components/Download.astro';
 import FAQ, { faqs } from '../components/FAQ.astro';
 import Footer from '../components/Footer.astro';
+import { SITE_URL as siteUrl, DISCORD_URL, AUTHORS, githubProfile } from '../lib/site';
 
-const siteUrl = 'https://tarkov.nexus';
+const repoUrl = 'https://github.com/ObsidianNetwork/Tarkov-Nexus';
+
+const people = AUTHORS.map((a) => ({
+  '@type': 'Person',
+  name: a.name,
+  alternateName: a.login,
+  url: githubProfile(a.login)
+}));
 
 const softwareSchema = {
   '@context': 'https://schema.org',
@@ -16,28 +26,31 @@ const softwareSchema = {
   name: 'Tarkov Nexus',
   alternateName: 'Tarkov Nexus Map Tracker',
   description:
-    'Free live position tracker that shows your real-time location on the Escape from Tarkov map by syncing in-game screenshot coordinates to tarkov.dev.',
+    'Free, open-source live Tarkov map tracker that shows your real-time position on every Escape from Tarkov map by syncing in-game screenshot coordinates to tarkov.dev.',
   url: siteUrl,
+  image: `${siteUrl}/og-image.png`,
+  screenshot: [
+    `${siteUrl}/screens/dashboard.png`,
+    `${siteUrl}/screens/party.png`,
+    `${siteUrl}/screens/overlay-circle.png`
+  ],
+  isAccessibleForFree: true,
+  license: 'https://opensource.org/license/mit',
+  codeRepository: repoUrl,
   applicationCategory: 'GameApplication',
   applicationSubCategory: 'Map Tool',
   operatingSystem: 'Windows 10, Windows 11',
   downloadUrl: 'https://github.com/ObsidianNetwork/Tarkov-Nexus/releases/latest',
-  softwareVersion: 'latest',
   offers: {
     '@type': 'Offer',
     price: '0',
     priceCurrency: 'USD'
   },
-  author: {
+  author: people,
+  publisher: {
     '@type': 'Organization',
     name: 'Obsidian Network',
     url: 'https://github.com/ObsidianNetwork'
-  },
-  aggregateRating: {
-    '@type': 'AggregateRating',
-    ratingValue: '5',
-    ratingCount: '1',
-    bestRating: '5'
   }
 };
 
@@ -47,15 +60,17 @@ const organizationSchema = {
   name: 'Obsidian Network',
   url: 'https://github.com/ObsidianNetwork',
   logo: `${siteUrl}/ON-512-logo-transparent.png`,
-  sameAs: ['https://github.com/ObsidianNetwork/Tarkov-Nexus']
+  sameAs: [repoUrl, DISCORD_URL],
+  member: people
 };
 
 const websiteSchema = {
   '@context': 'https://schema.org',
   '@type': 'WebSite',
   name: 'Tarkov Nexus',
-  url: siteUrl,
-  description: 'Live Tarkov map position tracker — see your real-time location on the Escape from Tarkov map.'
+  alternateName: ['TarkovNexus', 'Tarkov Nexus Map Tracker'],
+  url: `${siteUrl}/`,
+  description: 'Free live Tarkov map tracker. See your real-time position on every Escape from Tarkov map.'
 };
 
 const faqSchema = {
@@ -83,8 +98,10 @@ const faqSchema = {
   <Header />
   <main id="main">
     <Hero />
+    <Tour />
     <Features />
     <HowItWorks />
+    <Showcase />
     <Download />
     <FAQ />
   </main>

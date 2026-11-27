@@ -1,0 +1,55 @@
+---
+// Gallery for the screenshots that are not part of the pinned tour.
+// Add a screen by adding an entry; `wide` gives it the larger column.
+const baseUrl = import.meta.env.BASE_URL;
+
+const shots = [
+  {
+    src: 'screens/logs.png',
+    width: 1278,
+    height: 798,
+    alt: 'Logs screen with level filters, search, auto-scroll, and Export and Clear buttons',
+    title: 'Live logs',
+    body: 'Every event in one list, with level filters, search, and export.',
+    wide: true
+  },
+  {
+    src: 'screens/overlay-circle.png',
+    width: 486,
+    height: 486,
+    alt: 'Map overlay switched to a circular minimap showing the Customs map',
+    title: 'Round minimap',
+    body: 'The map overlay switches to a circular minimap from its toolbar.',
+    wide: false
+  }
+];
+---
+
+<section class="showcase" id="showcase">
+  <div class="container">
+    <div class="section-header reveal">
+      <span class="eyebrow">Gallery</span>
+      <h2>More of the app</h2>
+    </div>
+    <div class="showcase-grid">
+      {shots.map((shot, i) => (
+        <figure class:list={['shot', { 'shot--wide': shot.wide }, 'reveal']} style={`--reveal-delay: ${i * 60}ms`}>
+          <div class="shot-media">
+            <img
+              src={`${baseUrl}${shot.src}`}
+              alt={shot.alt}
+              width={shot.width}
+              height={shot.height}
+              loading="lazy"
+              decoding="async"
+            />
+          </div>
+          <figcaption>
+            <h3>{shot.title}</h3>
+            <p>{shot.body}</p>
+          </figcaption>
+        </figure>
+      ))}
+    </div>
+  </div>
+</section>

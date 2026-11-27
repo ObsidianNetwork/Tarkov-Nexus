@@ -27,7 +27,7 @@ WORKDIR /app
 # Unraid labels (must be in image for Unraid to detect)
 LABEL net.unraid.docker.webui="http://[IP]:[PORT:8766]/"
 LABEL net.unraid.docker.icon="https://raw.githubusercontent.com/Jordanmuss99/Tarkov-Nexus/main/Branding/Obi_logo.png"
-LABEL maintainer="Jordanmuss99"
+LABEL maintainer="Jordanmuss99, ImStillBlue"
 LABEL description="Tarkov Party Server - Real-time position sync for Escape from Tarkov"
 
 # Install ca-certificates for HTTPS

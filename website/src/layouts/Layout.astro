@@ -10,6 +10,7 @@ import '@fontsource/jetbrains-mono/400.css';
 import '@fontsource/jetbrains-mono/600.css';
 import Analytics from '../components/Analytics.astro';
 import FeedbackButton from '../components/FeedbackButton.astro';
+import { SITE_URL } from '../lib/site';
 
 interface Props {
   title?: string;
@@ -19,16 +20,16 @@ interface Props {
 }
 
 const {
-  title = "Live Tarkov Map Tracker — Real-Time Position Sync | Tarkov Nexus",
-  description = "Free live Tarkov map tracker. See your real-time position on the Escape from Tarkov map across Customs, Woods, Shoreline, Lighthouse, Reserve, Streets, Interchange, Factory, and Ground Zero — synced instantly to tarkov.dev.",
+  title = "Tarkov Nexus: Free Live Tarkov Map Tracker",
+  description = "Tarkov Nexus is a free, open-source live Tarkov map tracker. See your real-time position on every Escape from Tarkov map, share it with your squad, and sync it to tarkov.dev.",
   image = "/og-image.png",
   noindex = false
 } = Astro.props;
 
 const baseUrl = import.meta.env.BASE_URL;
-const siteUrl = "https://tarkov.nexus";
-const canonical = new URL(Astro.url.pathname, siteUrl).href;
-const ogImage = new URL(image, siteUrl).href;
+const canonical = new URL(Astro.url.pathname, SITE_URL).href;
+const ogImage = new URL(image, SITE_URL).href;
+const imageAlt = "Tarkov Nexus, the free live Tarkov map tracker";
 ---
 
 <!DOCTYPE html>
@@ -39,13 +40,17 @@ const ogImage = new URL(image, siteUrl).href;
   <title>{title}</title>
   <meta name="description" content={description}>
   <meta name="keywords" content="tarkov map, escape from tarkov map, tarkov live map, tarkov map tracker, tarkov position tracker, tarkov map sync, tarkov.dev map, tarkov customs map, tarkov woods map, tarkov shoreline map, tarkov lighthouse map, tarkov reserve map, tarkov streets map, EFT map, tarkov interactive map">
-  <meta name="author" content="Obsidian Network">
+  <meta name="author" content="Jordan (Jordanmuss99), uBlue (ImStillBlue)">
+  <meta name="application-name" content="Tarkov Nexus">
+  <meta name="apple-mobile-web-app-title" content="Tarkov Nexus">
   <meta name="theme-color" content="#0C0E14">
   <meta name="robots" content={noindex ? "noindex,nofollow" : "index,follow,max-image-preview:large,max-snippet:-1"}>
 
   <link rel="canonical" href={canonical}>
   <link rel="icon" type="image/x-icon" href={`${baseUrl}favicon.ico`}>
+  <link rel="icon" type="image/png" sizes="512x512" href={`${baseUrl}ON-512-logo-transparent.png`}>
   <link rel="apple-touch-icon" href={`${baseUrl}ON-512-logo-transparent.png`}>
+  <link rel="sitemap" href={`${baseUrl}sitemap-index.xml`}>
 
   <!-- Performance: preconnect to third-party hosts we hit -->
   <link rel="preconnect" href="https://api.github.com" crossorigin>
@@ -61,7 +66,8 @@ const ogImage = new URL(image, siteUrl).href;
   <meta property="og:image" content={ogImage}>
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
-  <meta property="og:image:alt" content="Tarkov Nexus — Live Tarkov Map Position Tracker">
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:alt" content={imageAlt}>
   <meta property="og:locale" content="en_US">
 
   <!-- Twitter Card -->
@@ -69,7 +75,7 @@ const ogImage = new URL(image, siteUrl).href;
   <meta name="twitter:title" content={title}>
   <meta name="twitter:description" content={description}>
   <meta name="twitter:image" content={ogImage}>
-  <meta name="twitter:image:alt" content="Tarkov Nexus — Live Tarkov Map Position Tracker">
+  <meta name="twitter:image:alt" content={imageAlt}>
 
   <slot name="head" />
 

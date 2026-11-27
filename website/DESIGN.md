@@ -70,6 +70,10 @@ Shadows are tinted (purple-black, never pure black):
 - GPU-composited only: `transform`, `opacity`, `filter`
 - Scroll reveal: `.reveal` starts `opacity:0; translateY(20px)`, becomes
   visible via IntersectionObserver; stagger with `--reveal-delay` in `ms`
+- Scroll-linked motion (Tour): one script writes a unitless `--p` (stop
+  position) and `--progress` (0-1) onto the section inside
+  `requestAnimationFrame`; CSS derives every transform and opacity from them.
+  No animation library.
 - Every animated element honors `prefers-reduced-motion: reduce` (no
   animation, final state immediately)
 
@@ -80,6 +84,9 @@ Shadows are tinted (purple-black, never pure black):
 - **`.btn-secondary`** — card surface + border; hover: border → primary.
 - **`.btn-beta`** — amber-outline variant for beta channel actions; amber tint
   glow on hover. Never used for stable actions.
+- **`.btn-discord`** — primary-tinted outline with the Discord logo, used for
+  the community invite (hero, footer; `.btn-discord--nav` pill in the header).
+  The invite URL lives in `src/lib/site.ts` (`DISCORD_URL`).
 - **`.card`** — `--bg-card`, hairline border, inset top highlight, tinted
   shadow; hover: border brightens + lift `-4px`.
 - **`.eyebrow`** — JetBrains Mono uppercase label, letter-spacing `0.14em`,
@@ -93,9 +100,26 @@ Shadows are tinted (purple-black, never pure black):
 
 - Container: `max-width: 1200px`, `padding-inline: 1.5rem`.
 - Hero: `min-height: 100svh` (never `100vh`), 2-col grid collapsing at 1024px.
+- Tour (`#tour`, directly after the hero): the section is one viewport tall
+  per stop and its stage is `position: sticky`. Copy sits in the left 5fr
+  column and the screenshots in the right 8fr column, all stacked in one grid
+  cell and turned around a vertical cylinder (40deg per stop) by scroll
+  position. The incoming screenshot stays faintly visible on the right; the
+  outgoing one fades fast because it crosses the copy column. Below 1024px the
+  screenshot sits above the copy and the incoming peek is hidden. Without
+  scripting or with reduced motion it is a plain stacked list of rows. Only
+  the main screens go here; a stop needs a title and one sentence.
+- Showcase (`#showcase`, after How it works): the remaining screens as
+  `.shot` cards in a 3-column grid, wide shots spanning 2; 1 column at 1024px.
+- Screenshots live in `public/screens/` as PNGs with the window edge cropped
+  and the outside of the window shape transparent. Shadow them with
+  `filter: drop-shadow`, never `box-shadow`, so the shadow follows the shape.
 - Features: **bento grid** — Real-Time Position, Party System, and Quest
   Tracking span 2 columns each, filling three full rows; collapses to 2-col
   (1024px, wides span full width) then 1-col (640px).
+- Footer: an authors band (copy + Discord button left, one `.author-card` per
+  GitHub profile right, stacking at 1024px) above the legal/link row. Authors
+  are listed in `src/lib/site.ts` (`AUTHORS`) and feed the JSON-LD too.
 - Sections alternate `--bg-darker` / `--bg-dark` with hairline separation.
 - Fixed background: two radial purple washes + SVG grain overlay (noise breaks
   digital flatness; always `pointer-events: none`, behind content).
@@ -135,8 +159,8 @@ Implement links with `data-analytics` + typed data attributes; the tracker in
 
 ## 7. Accepted debt
 
-- `aggregateRating` in JSON-LD is a self-assigned 5/1 rating — SEO risk if
-  flagged; kept from the original site.
+- `public/og-image.png` (1200x630) is a static render of the logo, tagline,
+  and dashboard screenshot; re-render it when branding or the dashboard changes.
 - Beta download links to the live `v3.3.4-beta.1` Windows-x64 asset; update the
   `BETA` constant in `Download.astro` (url + version) whenever a new beta ships.
 - FAQ is accordion-style; acceptable for 10 items, revisit if it grows.
