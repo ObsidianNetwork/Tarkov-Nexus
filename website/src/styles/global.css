@@ -191,6 +191,7 @@ header {
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  text-decoration: none;
 }
 
 .logo {
@@ -290,6 +291,36 @@ header {
   background: rgba(240, 160, 32, 0.14);
   border-color: var(--amber);
   box-shadow: var(--glow-amber);
+}
+
+/* Discord blurple is the same hue as --primary-purple, so the button reads as
+   Discord through its logo and outline treatment rather than a new color. */
+.btn-discord {
+  background: rgba(88, 101, 242, 0.12);
+  color: var(--text-primary);
+  border: 1px solid rgba(88, 101, 242, 0.5);
+}
+
+.btn-discord:hover {
+  background: rgba(88, 101, 242, 0.22);
+  border-color: var(--primary-purple);
+  box-shadow: var(--glow-primary);
+}
+
+.nav-links .btn-discord--nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.85rem;
+  border-radius: var(--radius-full);
+  color: var(--text-primary);
+  transition: background var(--t-fast) var(--ease-out),
+              border-color var(--t-fast) var(--ease-out);
+}
+
+.btn-discord--nav svg {
+  width: 16px;
+  height: 16px;
 }
 
 /* --------------------------------------------------------------------------
@@ -1084,9 +1115,121 @@ header {
    -------------------------------------------------------------------------- */
 
 footer {
-  padding: 3rem 0;
+  padding: 5rem 0 3rem;
   border-top: 1px solid rgba(42, 45, 56, 0.7);
   background: rgba(6, 8, 11, 0.5);
+}
+
+.footer-authors {
+  display: grid;
+  grid-template-columns: 5fr 6fr;
+  gap: 3rem;
+  align-items: center;
+  padding-bottom: 3.5rem;
+  margin-bottom: 2.5rem;
+  border-bottom: 1px solid rgba(42, 45, 56, 0.7);
+}
+
+.footer-authors-copy h2 {
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 2.6vw, 2rem);
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+  margin: 0.5rem 0 0.75rem;
+}
+
+.footer-authors-copy p {
+  color: var(--text-secondary);
+  max-width: 44ch;
+  margin-bottom: 1.5rem;
+}
+
+.author-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+.author-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.25rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  color: var(--text-primary);
+  text-decoration: none;
+  transition: transform var(--t-fast) var(--ease-out),
+              border-color var(--t-fast) var(--ease-out),
+              background var(--t-fast) var(--ease-out);
+}
+
+.author-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--primary-purple);
+  background: var(--bg-hover);
+}
+
+.author-card img {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-full);
+  border: 2px solid var(--border-bright);
+  background: var(--bg-hover);
+  flex-shrink: 0;
+}
+
+.author-meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.author-name {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.15rem;
+}
+
+.author-login {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--neon-green);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.author-role {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 0.15rem;
+}
+
+.author-arrow {
+  width: 18px;
+  height: 18px;
+  margin-left: auto;
+  flex-shrink: 0;
+  color: var(--text-muted);
+  transition: color var(--t-fast) var(--ease-out), transform var(--t-fast) var(--ease-out);
+}
+
+.author-card:hover .author-arrow {
+  color: var(--text-primary);
+  transform: translate(2px, -2px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .author-card,
+  .author-card:hover,
+  .author-card:hover .author-arrow {
+    transform: none;
+  }
 }
 
 .footer-content {
@@ -1185,6 +1328,11 @@ footer {
     text-align: center;
   }
 
+  .footer-authors {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+
   .hero-text p {
     margin-left: auto;
     margin-right: auto;
@@ -1268,6 +1416,16 @@ footer {
   .footer-content {
     flex-direction: column;
     text-align: center;
+  }
+
+  .footer-links {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1.25rem;
+  }
+
+  .author-list {
+    grid-template-columns: 1fr;
   }
 
   .feedback-fab {

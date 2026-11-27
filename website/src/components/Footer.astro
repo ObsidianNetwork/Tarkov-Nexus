@@ -1,17 +1,51 @@
 ---
+import DiscordIcon from './DiscordIcon.astro';
+import { AUTHORS, DISCORD_URL, githubProfile } from '../lib/site';
+
 const baseUrl = import.meta.env.BASE_URL;
+const year = new Date().getFullYear();
 ---
 
 <footer>
-  <div class="container footer-content">
-    <div class="footer-left">
-      <img src={`${baseUrl}ON-512-logo-transparent.png`} alt="Tarkov Nexus">
-      <span>Tarkov Nexus is not affiliated with Battlestate Games</span>
+  <div class="container">
+    <div class="footer-authors">
+      <div class="footer-authors-copy">
+        <span class="eyebrow">Made by</span>
+        <h2>The people behind Tarkov Nexus</h2>
+        <p>Built in the open by two Tarkov players. Follow along, star the repo, or come say hi on Discord.</p>
+        <a href={DISCORD_URL} target="_blank" rel="noopener" class="btn btn-discord" data-analytics="nav" data-nav-item="discord-footer">
+          <DiscordIcon />
+          Join the Discord
+        </a>
+      </div>
+      <ul class="author-list">
+        {AUTHORS.map((author) => (
+          <li>
+            <a href={githubProfile(author.login)} target="_blank" rel="noopener author" class="author-card" data-analytics="nav" data-nav-item={`author-${author.login}`}>
+              <img src={`${githubProfile(author.login)}.png?size=128`} alt="" width="56" height="56" loading="lazy" decoding="async">
+              <span class="author-meta">
+                <span class="author-name">{author.name}</span>
+                <span class="author-login">@{author.login}</span>
+                <span class="author-role">{author.role}</span>
+              </span>
+              <svg class="author-arrow" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 19.5l15-15m0 0H8.25m11.25 0v11.25" /></svg>
+            </a>
+          </li>
+        ))}
+      </ul>
     </div>
-    <div class="footer-links">
-      <a href="https://github.com/ObsidianNetwork/Tarkov-Nexus/releases" target="_blank" data-analytics="nav" data-nav-item="footer-github">GitHub</a>
-      <a href="https://tarkov.dev" target="_blank" data-analytics="nav" data-nav-item="footer-tarkov-dev">tarkov.dev</a>
-      <a href="https://github.com/ObsidianNetwork/Tarkov-Nexus/issues/new/choose" target="_blank" data-analytics="feedback" data-entry-point="footer">Feedback</a>
+
+    <div class="footer-content">
+      <div class="footer-left">
+        <img src={`${baseUrl}ON-512-logo-transparent.png`} alt="" width="32" height="32" loading="lazy">
+        <span>&copy; {year} Tarkov Nexus. Not affiliated with Battlestate Games.</span>
+      </div>
+      <nav class="footer-links" aria-label="Footer">
+        <a href="https://github.com/ObsidianNetwork/Tarkov-Nexus/releases" target="_blank" rel="noopener" data-analytics="nav" data-nav-item="footer-github">GitHub</a>
+        <a href={DISCORD_URL} target="_blank" rel="noopener" data-analytics="nav" data-nav-item="footer-discord">Discord</a>
+        <a href="https://tarkov.dev" target="_blank" rel="noopener" data-analytics="nav" data-nav-item="footer-tarkov-dev">tarkov.dev</a>
+        <a href="https://github.com/ObsidianNetwork/Tarkov-Nexus/issues/new/choose" target="_blank" rel="noopener" data-analytics="feedback" data-entry-point="footer">Feedback</a>
+      </nav>
     </div>
   </div>
 </footer>
